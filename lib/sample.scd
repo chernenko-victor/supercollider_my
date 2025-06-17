@@ -33,6 +33,114 @@ SynthDef(\sample_player_rate_var_proto, {
 // ~sample_player_rate_var.free;
 
 
+// Воспроизведение с возможностью изменения скорости и стартовой позиции
+SynthDef(\sample_player_rate_var_start_pos_proto, {
+	arg buf = 0, rate = 1, out_bus = 0, master_send_lvl_db = 0.0, start_pos_fract = 0;
+	// Sample frame to start playback
+	Out.ar(
+		out_bus,
+		dbamp(master_send_lvl_db) *
+		PlayBuf.ar(
+			2,
+			buf,
+			BufRateScale.kr(buf) * rate,
+			loop: 1,
+			startPos: BufFrames.kr(buf) * start_pos_fract
+		)
+	);
+}).add;
+
+
+// example
+// ~sample_player_rate_var_start_pos = Synth(\sample_player_rate_var_start_pos_proto, [\buf, ~pad_buf, \out_bus, ~master_send, \rate, -0.5, \start_pos_fract, 0.5]);
+// ~sample_player_rate_var_start_pos.free;
+
+
+// Воспроизведение с возможностью изменения скорости, ретриггеренгом скорости и стартовой позиции
+
+SynthDef(\sample_player_retgig_rate_proto, {
+	arg
+	    rate_begin = 1.0
+	  , rate_end = 1.0
+	  , buf = 0
+	  , out_bus = 0
+	  , master_send_lvl_db = 0.0
+	  , rate = 1.0
+	  , start_pos_fract = 0.0
+	  , env_time = 3.0;
+
+	var
+	    env_rate
+	  , env_rate_gen;
+
+	env_rate = Env.new(levels: [rate_begin, rate_begin, rate_end], times: [0.01, env_time]);
+	env_rate_gen = EnvGen.kr(env_rate, \trig_rate.tr);
+	// env_rate_gen = EnvGen.kr(env_rate, trig_frq);
+
+	Out.ar(
+		out_bus,
+		dbamp(master_send_lvl_db) *
+		PlayBuf.ar(
+			2,
+			buf,
+			BufRateScale.kr(buf) * env_rate_gen,
+			// BufRateScale.kr(buf) * rate,
+			loop: 1,
+			startPos: BufFrames.kr(buf) * start_pos_fract // Sample frame to start playback
+		)
+	);
+}).add;
+
+
+// example
+~sample_player_retgig_rate = Synth(\sample_player_retgig_rate_proto, [\out_bus, ~master_send, \rate_begin, 2.0, \rate_end, 2.5, \trig_rate, 1]);
+~sample_player_retgig_rate.set(\trig_rate, 1);
+~sample_player_retgig_rate.set(\rate_begin, 2.0, \rate_end, 0.5, \env_time, 0.5, \trig_rate, 1);
+~sample_player_retgig_rate.set(\rate_begin, 2.5, \rate_end, 2.0, \env_time, 5, \trig_rate, 1);
+~sample_player_retgig_rate.free;
+
+/*
+SynthDef(\sample_player_retgig_rate_proto, {
+	arg
+	    buf = 0
+	  , rate = 1
+	  , out_bus = 0
+	  , master_send_lvl_db = 0.0
+      , rate_begin = 1.0
+	  , rate_end = 1.0
+	  , start_pos_fract = 0;
+
+	var
+	  env_rate
+	  , env_rate_gen;
+
+	env_rate = Env.new(
+	    levels: [rate_begin, rate_begin, rate_end]
+	  , times: [0.001, 3]
+	);
+
+	env_rate_gen = EnvGen.new(env_rate, \trig_rate.tr);
+
+	Out.ar(
+		out_bus,
+		dbamp(master_send_lvl_db) *
+		PlayBuf.ar(
+			2,
+			buf,
+			// BufRateScale.kr(buf) * env_rate_gen,
+			BufRateScale.kr(buf) * rate,
+			loop: 1,
+			startPos: BufFrames.kr(buf) * start_pos_fract // Sample frame to start playback
+		)
+	);
+}).add;
+
+
+// example
+// ~sample_player_retgig_rate = Synth(\sample_player_retgig_rate_proto, [\buf, ~pad_buf, \out_bus, ~master_send, \start_pos_fract, 0.5, \trig_rate, 1]);
+// ~sample_player_retgig_rate.free;
+*/
+
 SynthDef(\granulator2_proto, {
 	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0;
 	var out, center_pos, dur = 1, env, env_form;
