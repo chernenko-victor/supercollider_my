@@ -17,4 +17,8 @@
 ~express_stereo_test = ~express_stereo_test_proto.play;
 ~express_stereo_test.free;
 
-//include server.scd for varios server info and actions
+// include server.scd for varios server info and actions
+// if there is no sounds see synth stack (node tree) to ensure all exemplars of synths
+// works and order is right:
+// 1. signals goes from top to bottom,
+// 2. exemplar of synth added to top of stack

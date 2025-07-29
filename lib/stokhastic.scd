@@ -67,7 +67,7 @@
 		~equal_distr.value(min_val, max_val)
 	  }
 	  {3} {
-		~equal_distr.value(min_val, max_val)
+		~lin_min_distr.value(min_val, max_val)
 	  }
 	  {4} {
 		~lin_max_distr.value(min_val, max_val)
@@ -75,8 +75,11 @@
 	  {5} {
 		~tri_distr.value(min_val, max_val)
 	  }
+	  {6} {
+		weight_arr = weight_arr.normalizeSum;
+		value_arr.wchoose(weight_arr);
+	  }
 	;
-
 };
 
 )

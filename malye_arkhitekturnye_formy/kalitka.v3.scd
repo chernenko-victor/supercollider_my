@@ -24,6 +24,7 @@
 // include lib/sample
 // include lib/additive
 // include lib/fft_fx
+// include lib/form
 
 (
 ~master = Synth(\master_proto, [\in_bus, ~master_send]);
@@ -103,7 +104,7 @@
  	\thresh, 0.37
  	, \slopeBelow, 1
  	, \slopeAbove, 1/4
- 	, \compressor_out_lvl_db, 1.5
+ 	, \compressor_out_lvl_db, 3.5
 );
 )
 
@@ -147,7 +148,6 @@
 )
 ~sample_player_rate_var_start_pos3.release;
 
-
 (
 ~sample_player_rate_var_start_pos4 = Synth(\sample_player_rate_var_start_pos_proto, [
 	  \buf, ~v_teni_berez_instr_1_p1_buf
@@ -180,33 +180,67 @@
 ~sample_player_retgig_rate.free;
 */
 
-{XLine.kr(1, 10, 1, doneAction: 2).poll}.play(s);
-{XLine.kr(1, 10, 1, doneAction: 2)}.plot(1);
-
-
-// (
-// {
-// 	var env_pairs
-// 	Env.pairs().poll;
-// }.play(s);
-// )
+////////////////////////////////////////////////
+//
+// form
 
 (
-~piece_form = Env.pairs({ { 1.0.rand } ! 2 } ! 6, \exp);
-~piece_form.plot;
-~form_cur_val = 0;
+var piece_total_dur = 60;
+
+// function to get form env from client
+~ob_part1 = TempoClock.new(1);
+~ob_part1_clock_func = {
+	arg ...args;
+	//var len, amp, midi_amp;
+	args.postln;
+	~form_ctlr_bus.get({
+		arg val;
+		val.postln;
+	});
+	1;
+};
+
+// work with form event on server
+~sample_player_rate_var_start_pos_rate_bus = Bus.control(s, 1);
+
+~sample_player_rate_var_start_pos = Synth(\sample_player_rate_var_start_pos_proto, [
+	  \buf, ~pf1_buf
+	, \out_bus , ~master_send
+	//, \master_send_lvl_db, -12
+	, \master_send_lvl_db, -33
+	, \rate, -0.5
+	, \start_pos_fract, 0.5
+	, \send_fx1_bus, ~fft_rand_comb1_send
+	, \send_fx1_lvl_db, 12
+]);
+~sample_player_rate_var_start_pos.map(\rate, ~sample_player_rate_var_start_pos_rate_bus);
+
+
+// bus listener
+// + scales special bus signals
+~listen_bus1 = {
+	var in, sample_player_rate_var_start_pos_rate_bus;
+	in = In.kr(~form_ctlr_bus, 1);
+	//Poll.kr(Impulse.kr(2), in, \form_cur_val);
+
+	sample_player_rate_var_start_pos_rate_bus = (in * 4) - 2;
+	Out.kr(~sample_player_rate_var_start_pos_rate_bus, sample_player_rate_var_start_pos_rate_bus);
+	Poll.kr(Impulse.kr(2), sample_player_rate_var_start_pos_rate_bus, \sample_player_rate_var_start_pos_rate_bus);
+
+}.play(s);
+
+~form_env_player.play(s, args: [\timeScale, piece_total_dur]);
+
+~ob_part1.sched(0, ~ob_part1_clock_func);
+)
+
+(
+~listen_bus1.release;
+~sample_player_rate_var_start_pos.release;
+~ob_part1.stop;
 )
 
 
-(
-{
-	~form_cur_val = EnvGen.kr(~piece_form, 1, levelScale: 10, timeScale: 10, doneAction: 2)
-	//.poll;
-}.play(s);
-{
-	Poll.kr(Impulse.kr(0.1), ~form_cur_val, \form_cur_val);
-}.play(s);
-)
 ////////////////////////////////////////////////
 //
 // finalize
