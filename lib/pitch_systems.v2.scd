@@ -5,19 +5,20 @@
 
 (
 ~get_line_stepbased = {
-	arg step_arr, base, indx;
-	var res = base;
+	arg step_arr, base_num = 0, indx = 0, base_index = 0;
+	var res = base_num;
 
 	if(
 		indx > 0,
 		{
 			indx.do({
 				arg val, indx_curr;
-				//("indx_curr = "+indx_curr).postln;
-				//("res before = "+res).postln;
-				//(step_arr.wrapAt(indx_curr)).postln;
+				indx_curr = base_index + indx_curr;
+				("indx_curr = "+indx_curr).postln;
+				("res before = "+res).postln;
+				(step_arr.wrapAt(indx_curr)).postln;
 				res = res + step_arr.wrapAt(indx_curr);
-				//("res after = "+res).postln;
+				("res after = "+res).postln;
 			});
 		}
 	);
@@ -26,9 +27,10 @@
 		{
 			(-1 *indx).do({
 				arg val, indx_curr;
+				indx_curr = base_index + indx_curr;
 				//("indx_curr = "+indx_curr).postln;
 				//("res before = "+res).postln;
-				(step_arr.wrapAt(indx_curr)).postln;
+				//(step_arr.wrapAt(indx_curr)).postln;
 				res = res - step_arr.wrapAt(-1 * (indx_curr + 1));
 				//("res after = "+res).postln;
 			});
@@ -38,6 +40,8 @@
 	res;
 };
 
+
+//something wrong
 ~get_step_by_midi_pitch = {
 	arg step_arr, base, min_pitch, max_pitch;
 	var res = [nil, nil], indx = 0;
