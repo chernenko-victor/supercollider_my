@@ -1,11 +1,10 @@
-~ptrn1 = Pbind(\degree, Pwhite(0, 7, inf), \dur, 0.25, \legato, 1);
-
-(
-p = ~ptrn1.play;
-
-)
-p.stop;
-
+// ~ptrn1 = Pbind(\degree, Pwhite(0, 7, inf), \dur, 0.25, \legato, 1);
+//
+// (
+// p = ~ptrn1.play;
+//
+// )
+// p.stop;
 
 //~get_line_stepbased.(~euro_diatonic_step1, 0, 3, 3);
 

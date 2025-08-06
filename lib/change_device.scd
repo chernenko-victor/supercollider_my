@@ -24,6 +24,8 @@ o = Server.default.options;
 
 o.outDevice_("Windows DirectSound : Headphones (USB AUDIO DEVICE)"); // works well with csound
 
+o.outDevice_("MME : Переназначение звуковых устр. - Output");
+
 o.outDevice_("ASIO : ReaRoute ASIO (x64)");
 
 // o.outDevice_("Windows DirectSound : Headphones (USB AUDIO DEVICE)   (device #10 with 0 ins 2 outs)"); // and what to do with two device with same name???
