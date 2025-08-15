@@ -243,6 +243,8 @@ p.stop;
 //////////////////////////////////////
 // compound patterns
 
+// In Pbind, you can’t have arrays of patterns, but only patterns that return arrays.
+
 // well
 /*(
 ~rand_acc1_ptrn = Pbind(

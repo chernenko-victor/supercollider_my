@@ -1,0 +1,1 @@
+{[VarSaw.ar(40, width: 0.5), VarSaw.ar(40, width: LFTri.kr(1).range(0.01, 0.99))]}.plot(0.5);
