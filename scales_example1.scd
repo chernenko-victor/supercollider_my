@@ -109,5 +109,45 @@ Scale.directory;
 ~phryg_scale_buf.plot;
 
 // ===============
-~phryg_scale.performDegreeToKey(4, 24, 0)
+~phryg_scale.performDegreeToKey(2, 24, 0); // вводим номер ступени, получаем кол-во полутонов amount of semitones by number of degree
 
+
+~phryg_scale.performDegreeToKey(9, 12, 0);
+
+~phryg_scale.performDegreeToKey(-2, 12, 0);
+
+
+
+////////////////////////////////
+
+
+// no effect!!!
+// (
+// Pdef(\seven_tone_pl,
+// 	Pbind(
+// 		\note, PdegreeToKey(Pseq([1, 2, 3, 4, 5], inf), Scale.major, stepsPerOctave: 24),
+// 		\instrument, \default,
+// 		\dur, 0.5
+// 	);
+// ).stop;
+// )
+
+
+// nothing happends when stepsPerOctave changed
+// ~deg2key_ptrn = PdegreeToKey(Pseq([1, 2, 3, 4, 5], 5), Scale.major, stepsPerOctave: 24);
+~deg2key_ptrn = PdegreeToKey(Pseq([1, 2, 3, 4, 5], 5), #[0, 2, 3, 6, 7, 9], stepsPerOctave: 7);
+~deg2key_ptrn_stream = ~deg2key_ptrn.asStream;
+~deg2key_ptrn_stream.nextN(5);
+
+~new_scale = Scale.new((0..7), 24);
+
+(
+Pdef(\new_scale_pl,
+	Pbind(
+		\degree, Pseq([1, 2, 3, 4, 5], inf),
+		// \note, Pseq([1, 2, 3, 4, 5], inf),
+		\scale, Scale.major,
+		// \scale, ~new_scale,
+	)
+).stop;
+)
