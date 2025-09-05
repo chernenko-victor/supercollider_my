@@ -30,6 +30,7 @@
 	curr_val = begin_val;
 	clock.sched(0, {
 		curr_val = ~get_line.value(begin_val, end_val, begin_time, end_time, clock.seconds);
+		// linlin, see SimpleNumber
 		curr_val.postln;
 		~curr_freq = curr_val;
 		if(clock.seconds < end_time) {0.25} {clock.stop; \done.postln};

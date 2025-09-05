@@ -1,6 +1,6 @@
 (
 Pdef(\part1, Pbind(
-	\degree, Pdefn(\part1_degree, 4),
+	\degree, Pdefn(\part1_degree, 4), // MUST BE DEFINED AS Pdef ELSE IT WILL NOT WORK!!!
 	\amp, 0.1,
 	\sustain, 0.2,
 	\dur, 0.5,
