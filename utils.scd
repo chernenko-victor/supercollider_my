@@ -17,6 +17,7 @@
 	curr_tempo = begin_tempo;
 	clock.sched(0, {
 		curr_tempo = ~get_line.value(begin_tempo, end_tempo, begin_time, end_time, clock.seconds);
+		// linlin
 		curr_tempo.postln;
 		clock.tempo_(curr_tempo);
 		if(clock.seconds < end_time) {0.25} {\done.postln};
@@ -33,9 +34,12 @@
 	curr_val = begin_val;
 	clock.sched(0, {
 		curr_val = ~get_line.value(begin_val, end_val, begin_time, end_time, clock.seconds);
+		// linlin
 		curr_val.postln;
 		// 2DO: control bus there to translate this value
 		if(clock.seconds < end_time) {0.25} {clock.stop; \done.postln};
 	});
 };
+
+// linexp
 )

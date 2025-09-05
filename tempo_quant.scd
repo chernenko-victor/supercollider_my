@@ -119,3 +119,8 @@ Event.partialEvents.ampEvent[\amp].postcs;
 
 
 Event.partialEvents.pitchEvent[\freq].postcs;
+
+
+// start something from next bar
+
+~clock1.schedAbs(~clock1.nextBar - 0.01, {nil;});

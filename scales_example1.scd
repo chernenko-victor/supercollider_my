@@ -116,8 +116,43 @@ Scale.directory;
 
 ~phryg_scale.performDegreeToKey(-2, 12, 0);
 
+///////////////////////////////
+// see SimpleNumber for DegreeToKey
 
+~hijaz_scale = Scale.hijaz;
 
+/*
+\ zhi: Zhi
+-> Scale([ 0, 2, 8, 10, 14, 17, 20 ], 24, Tuning([ 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 10.5, 11.0, 11.5 ], 2.0, "ET24"), "Hijaz")
+*/
+
+~hijaz_scale.degrees;
+
+(
+// l = [0, 1, 5, 9, 11]; // pentatonic scale
+(1, 2..15).collect{|i|
+    i.degreeToKey(~hijaz_scale.degrees, 24)
+};
+)
+
+(
+(0, -1..-15).collect{|i|
+    i.degreeToKey(~hijaz_scale.degrees, 24)
+};
+)
+
+(
+Pdef(\hijaz_scale_pl,
+	Pbind(
+		\degree, Pfunc({
+			((1, 2..15)-5).choose.degreeToKey(~hijaz_scale.degrees, 24);
+		}),
+		\scale, ~hijaz_scale,
+		// \scale, Scale.minor,
+	)
+).play;
+)
+Pdef(\hijaz_scale_pl).stop;
 ////////////////////////////////
 
 
@@ -146,8 +181,8 @@ Pdef(\new_scale_pl,
 	Pbind(
 		\degree, Pseq([1, 2, 3, 4, 5], inf),
 		// \note, Pseq([1, 2, 3, 4, 5], inf),
-		\scale, Scale.major,
-		// \scale, ~new_scale,
+		// \scale, Scale.major,
+		\scale, ~new_scale,
 	)
 ).stop;
 )
