@@ -25,6 +25,8 @@ m.allNotesOff(16);
 
 ~midi_out_ptrn_pl = (~midi_out_ptrn <> (type: \midi, midiout: m)).play;
 
+// <> another form of Pchain
+
 // Pdef(\midi_out_pl).stop;
 ~midi_out_ptrn_pl.stop;
 
