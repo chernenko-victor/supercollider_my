@@ -8,6 +8,7 @@ Pbind(
 ).play;
 )
 
+// install SCLorkSynths Quark and add kick808, snare1
 (
 ~cl1 = TempoClock.new(2);
 
