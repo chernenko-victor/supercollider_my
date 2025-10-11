@@ -1,11 +1,11 @@
 (
 Pbind(
-	// \degree, Pwalk(pitches, Pfunc { 1 }, 1, 7),
-	// \note, Pwalk((1..12), Pfunc { 1 }, 1, 7),
-	// \note, Pwalk((1..12), 1, 1, 7),
+	// //\degree, Pwalk(pitches, Pfunc { 1 }, 1, 7),
+	// //\note, Pwalk((1..12), Pfunc { 1 }, 1, 7),
+	\note, Pwalk((1..12), 1, 1, 7).trace,
 	// \note, Pwalk((1..12), 1, Pseq([-1, 1], inf), 7),
 	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Pseq([-1, 1], inf), 7).trace,
-	\note, Pwalk((1..12), Pseq([1, 2, 2], inf), Prand([-1, 1], inf), 7).trace,
+	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Prand([-1, 1], inf), 7).trace,
 	\dur, 0.25,
 ).play;
 )
@@ -42,7 +42,7 @@ Pbind(
 		4,
 		Pclutch(Prand(#[-1, 1, -2, 2], inf), Pseq([0, 0, 0, 1], inf)),
 		inf
-	).fold(-7, 11).clump(3).trace,.
+	).fold(-7, 11).clump(3).trace,
 	\dur, Prand((1..6)++[Rest(1), Rest(2), Rest(4)], inf),
 ).play;
 )

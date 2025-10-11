@@ -119,10 +119,18 @@ Pbind(
 
 
 // convert function to synth
+
+// =============================================================
+// CAUSION: Always limit amplitude before listening sounds!
+// =============================================================
+
 (
 {
 	arg freq, amp; // two inputs
-	SinOsc.ar(freq) * amp;
+	Limiter.ar( // just for safety: limit loud sounds to -0.4 dB
+		SinOsc.ar(freq) * amp, // audio signal
+		level: dbamp(-0.4)
+	);
 }.asSynthDef(fadeTime: 0.1, name: \sin_synth_proto).add;
 )
 
