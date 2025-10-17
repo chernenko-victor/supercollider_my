@@ -41,7 +41,7 @@ a.free;
 // SynthDef creates these when compiling the ugenGraph function.
 //
 // what a difference with exaple above?
-
+(
 SynthDef("manySines", {arg out=0;
     var sines, control, numsines;
     numsines = 20;
@@ -49,6 +49,9 @@ SynthDef("manySines", {arg out=0;
     sines = Mix(SinOsc.ar(control, 0, numsines.reciprocal)) ;
     Out.ar(out, sines ! 2);
 }).add;
+)
+
+b = Synth(\manySines);
 
 // our control name is "array"
 b.setn(\array, Array.rand(20, 200, 1600));
@@ -56,7 +59,7 @@ b.setn(\array, {rrand(200, 1600)}!20);
 b.setn(\array, {rrand(200, 1600)}.dup(20));
 // NOTE: All three lines above do exactly the same, just different syntax
 
-
+b.free;
 
 Klang
 // Klang can not recieve updates to its frequencies nor can it be modulated. For that we use DynKlang
@@ -117,7 +120,27 @@ MoogFF
 // for that we use Ringz
 { Ringz.ar(Dust.ar(2, 0.6), MouseX.kr(200,6000,1), 2) }.play
 
-{ Mix.fill(10, {Ringz.ar(Impulse.ar(LFNoise2.ar(rrand(0.1, 1)).range(0.5, 1), 0, 0.1),  LFNoise2.ar(0.1).range(200,12000), LFNoise2.ar(2).range(0.04,6,1)) })}.play;
+// toooo loud in high
+// compression doesnt fix it
+// filtering?
+(
+{
+	var sig_out;
+	sig_out = Mix.fill(10,  {
+		Ringz.ar(
+			Impulse.ar(
+				LFNoise2.ar(rrand(0.1, 1)).range(0.5, 1),
+				0,
+				0.1
+			),
+			LFNoise2.ar(0.1).range(200,3000),
+			LFNoise2.ar(2).range(0.04,6,1)
+		)
+	});
+	sig_out = Compander.ar(sig_out, sig_out, 0.85, slopeBelow: 0.7, slopeAbove: 0.1) * 0.2;
+	sig_out = Limiter.ar(sig_out, dbamp(-1));
+}.play;
+)
 
 
 /////////////////
