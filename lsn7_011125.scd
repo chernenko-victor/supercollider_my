@@ -244,6 +244,7 @@ b.set(\gate, 0);
 }.play;
 )
 
+// see self_trig.scd
 
 // ================================
 //            Filter
@@ -330,7 +331,7 @@ MoogFF
 
 // further for lession 7 (02.11.25)
 
-//...
+// see \white_noise_substr_adsr_proto from self_trig.scd
 
 // ================================
 //       Samples
@@ -483,6 +484,142 @@ Pbind(
 ).play;
 )
 
+// ================================
+//            Granulation +
+//            retrigger +
+//            map control bus to synth arg
+// ================================
+
+~buf_sample3 = Buffer.readChannel(s, "D:/audio/samples/pf_STE-000.wav", channels: [0]);
+
+(
+SynthDef(\granulator2_proto, {
+	arg
+	  buf = 0,
+	  center_pos_rnd_freq = 0.7,
+	  grain_rate = 1;
+	var
+	  out,
+	  center_pos,
+	  dur = 1,
+	  env,
+	  env_form;
+
+	env_form = Env.new(
+		levels: [0.5, 0.5, 0.05],
+		times: [0.01, 1]
+	);
+	env = EnvGen.kr(env_form, \trig_dur.tr);
+	dur = dur * env;
+	center_pos = (SinOsc.kr(0.3)
+		           .range(dur/2, BufDur.kr(buf)/2)) *
+	             LFNoise2
+	               .kr(center_pos_rnd_freq)
+	               .range(0.3, 1);
+	out = TGrains.ar(
+		numChannels: 2,
+		trigger: Impulse.kr(LFNoise2.kr(0.7).range(0.3, 100)),
+		bufnum: buf,
+		rate: grain_rate,
+		// centerPos: BufDur.kr(buf)/2,
+		centerPos: center_pos,
+		dur: dur,
+		amp: 0.5
+	);
+	4.do({
+		arg indx;
+		out = CombC.ar(out, 0.5, 0.5 / (indx + 1), 0.1 * (indx + 1));
+	});
+	out = Mix.fill(6, {
+		AllpassC.ar(out, 1, [0.8*rand(0.01, 1), 0.8*rand(0.01, 1)], 1*rand(0.5, 2));
+	});
+	out = out / 6;
+	out = Compander.ar(out, out, dbamp(-3), 0.2, 1);
+	out = Limiter.ar(out, 0.92);
+	Out.ar(0, out);
+}).add;
+)
+
+~granulator2 = Synth(\granulator2_proto, [\buf, ~buf_sample3]);
+
+~granulator2.set(\trig_dur, 5); // set parameter
+
+~granulator2.set(\trig_dur, 0.001);
+
+// control parameters via bus
+
+~center_pos_rnd_freq_ctrl_bus = Bus.control(s, 1);
+
+~granulator2.map(\center_pos_rnd_freq, ~center_pos_rnd_freq_ctrl_bus);
+
+~center_pos_rnd_freq_ctrl_bus.set(0.1);
+
+~center_pos_rnd_freq_ctrl_bus.set(5);
+
+(
+~change_center_pos_rnd_freq_clck = TempoClock.new(1);
+~change_center_pos_rnd_freq_clck.sched(0, {
+	arg ...args;
+	var beats = args[0], sin_arg, sin_val;
+	sin_arg = (beats%30).linlin(0, 29, 0, 2 * 3.14);
+	sin_val = sin(sin_arg).linlin(-1, 1, 0.05, 2);
+	sin_val.postln;
+	~center_pos_rnd_freq_ctrl_bus.set(sin_val);
+	1;
+});
+)
+~change_center_pos_rnd_freq_clck.stop;
+
+// turn off synth
+
+~granulator2.free;
+
+// another variant
+
+(
+a = Bus.control(s, 1).set(440);
+b = Bus.control(s, 1).set(0.01);
+)
+(
+SynthDef(\rlpf, { |out, ffreq, rq|
+    Out.ar(out, RLPF.ar(WhiteNoise.ar(0.2), ffreq, rq))
+}).play(s, [\ffreq, a.asMap, \rq, b.asMap]);
+)
+
+
+~rate_ctrl_bus = Bus.control.set(1.5);
+
+(
+~granulator2 = Synth(\granulator2_proto, [
+	\buf, ~buf_sample3,
+	\grain_rate, ~rate_ctrl_bus.asMap
+]);
+)
+
+~rate_ctrl_bus.set(-0.5);
+
+(
+~change_rate_clck = TempoClock.new(1);
+~change_rate_clck.sched(0, {
+	arg ...args;
+	var beats = args[0], sin_arg, sin_val;
+	sin_arg = (beats%30).linlin(0, 29, 0, 2 * 3.14);
+	sin_val = sin(sin_arg).linlin(-1, 1, -1.5, 1.5);
+	sin_val.postln;
+	~rate_ctrl_bus.set(sin_val);
+	1;
+});
+)
+~change_rate_clck.stop;
+
+
+~granulator2.free;
+
+// see also comp1.scd
 
 
 
+// ================================
+//            FFT +
+//            pitch shift
+// ================================

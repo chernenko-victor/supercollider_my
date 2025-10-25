@@ -11,6 +11,8 @@ m.noteOn(16, ~midi_pitch, rrand(50, 80));
 
 m.noteOff(16, ~midi_pitch, 0);
 
+// MIDIOut.control(chan, ctlNum: 7, val: 64)
+
 m.allNotesOff(16);
 
 
@@ -61,3 +63,51 @@ m.allNotesOff(16);
 ~midi_out_ob_clk.tempo = 0.3
 
 ~midi_out_ob_ptrn_pl.stop;
+
+////////////////////////////////////
+// The \midi event type supports the following commands, chosen in the event by the \midicmd key: \allNotesOff, \bend, \control, \noteOff, \noteOn, \polyTouch, \program, \smpte, \songPtr, \sysex, \touch. The default is \noteOn. When playing a note (noteOn), by default the corresponding noteOff message will be sent after the note's sustain time.
+///////////////////////////////////
+(
+    // substitute your own device here
+var    mOut = MIDIOut.newByName("FastLane USB", "Port A").latency_(Server.default.latency);
+
+p = Pbind(
+    \type, \midi,
+        // this line is optional b/c noteOn is the default
+        // just making it explicit here
+    \midicmd, \noteOn,
+    \midiout, mOut,    // must provide the MIDI target here
+    \chan, 0,
+
+	// because of \midicmd, \noteOn
+	// we can use \midinote, \amp etc.
+        // degree is converted to midinote, not just frequency
+    \degree, Pwhite(-7, 12, inf),
+    \dur, Pwrand([0.25, Pn(0.125, 2)], #[0.8, 0.2], inf),
+    \legato, sin(Ptime(inf) * 0.5).linexp(-1, 1, 1/3, 3),
+    \amp, Pexprand(0.5, 1.0, inf)
+).play(quant: 1);
+)
+
+p.stop;
+
+//////////////////////////////
+// https://doc.sccode.org/Tutorials/A-Practical-Guide/PG_08_Event_Types_and_Parameters.html#MIDI%20output
+
+/*
+one of the \midicmd value is \control
+\control - Continuous controller message. Next keys:
+    \chan - MIDI channel (0-15).
+    \ctlNum -Controller number to receive the new value.
+    \control - New value (0-127).
+*/
+
+//////////////////////////////
+// composite
+// perform any number of event types, given as ~types
+
+MIDIClient.init;
+m = MIDIOut(0);
+​
+// should play a synth *and* an external MIDI note simultaneously
+(type: \composite, types: [\note, \midi], midiout: m, degree: 0, dur: 3).play;

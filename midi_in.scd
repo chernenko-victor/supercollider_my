@@ -15,6 +15,11 @@ off = MIDIFunc.noteOff({ |veloc, num, chan, src|
     notes[num].release;
 });
 
+/*MIDIFunc.cc({|val, ccNum, chan, src|
+    val.postln; //this totally works!
+    ~synth.set(\cc1, val / 127);
+}, ccNum:1);*/
+
 q = { on.free; off.free; };
 )
 

@@ -1,3 +1,5 @@
+//required(./lib/stokhastic)
+
 ~test_ptrn = Pseries(32, [2, 3].choose, inf);
 
 ~test_ptrn.asStream.nextN(10);
@@ -32,7 +34,7 @@ Prand(Pseries({ rrand(0, 7) }, 1, { rrand(4, 8) }), 1);
 
 (
 SynthDef(\white_noise_substr_adsr_proto, {
-	arg freq_base = 440, gate = 1;
+	arg freq = 440, gate = 1;
 	var out_sound, env_form, env_amp;
 	// env_form = Env.perc(0.5, 2.5, curve: 4); // Envelope form
 	env_form = Env.adsr();
@@ -46,7 +48,7 @@ SynthDef(\white_noise_substr_adsr_proto, {
 		arg index;
 		out_sound = out_sound + BPF.ar(
 			WhiteNoise.ar(0.1),
-			freq_base * (index + 1),
+			freq * (index + 1),
 			0.05 * (1.1 - env_amp) // Modulate band width with envelope used for amplitude
 		)
 	});
@@ -60,8 +62,18 @@ SynthDef(\white_noise_substr_adsr_proto, {
 }).add;
 )
 
-~white_noise_substr_adsr = Synth.new(\white_noise_substr_adsr_proto, [\freq_base, ~lin_min_distr.value(110, 660)]);
+~white_noise_substr_adsr = Synth.new(\white_noise_substr_adsr_proto, [\freq, ~lin_min_distr.value(110, 660)]);
 ~white_noise_substr_adsr.set(\gate, 0);
+
+
+(
+~part2 = Pbind(
+	\instrument, \white_noise_substr_adsr_proto,
+	\midinote, Pseq([67, Rest(), 68, 54, 72, Rest(), 72, 72], 1),
+	\dur, 0.25
+).play;
+)
+~part2.stop;
 
 
 /////////////////////////////////////////////////////
@@ -78,7 +90,7 @@ SynthDef(\white_noise_substr_adsr_proto, {
 	if(
 		~part1_pause == 0,
 		{
-			~white_noise_substr_adsr = Synth.new(\white_noise_substr_adsr_proto, [\freq_base, ~lin_min_distr.value(110, 660)]);
+			~white_noise_substr_adsr = Synth.new(\white_noise_substr_adsr_proto, [\freq, ~lin_min_distr.value(110, 660)]);
 			~part1_pause = 1;
 		},
 		{
