@@ -67,6 +67,31 @@ m.allNotesOff(16);
 ////////////////////////////////////
 // The \midi event type supports the following commands, chosen in the event by the \midicmd key: \allNotesOff, \bend, \control, \noteOff, \noteOn, \polyTouch, \program, \smpte, \songPtr, \sysex, \touch. The default is \noteOn. When playing a note (noteOn), by default the corresponding noteOff message will be sent after the note's sustain time.
 ///////////////////////////////////
+
+(
+Pdef(\midi_out_pl,
+	Pbind(
+		// type: \composite,
+		// types: [\note, \midi],
+
+		\type, \midi,
+		\midiout, m,
+        \degree, 0, //
+
+		\midicmd, \control, // Specify the MIDI command type
+    \ctlNum, 11, // Control number (e.g., volume)
+		\control, Pseq([32, 64, 98], inf), // Control value
+    \chan, 0, // MIDI channel
+
+    \dur, 1 // Duration
+	)
+).stop;
+)
+
+
+// \midicmd block notes
+
+///////////////////////////////////
 (
     // substitute your own device here
 var    mOut = MIDIOut.newByName("FastLane USB", "Port A").latency_(Server.default.latency);

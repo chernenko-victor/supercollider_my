@@ -51,7 +51,51 @@ Compiling directory "Название директории"
 //         Подготовка к работе
 ///////////////////////////////////////////
 
-// Надо запустить код из fx.scd
+(
+// Воспроизведение с возможностью изменения скорости
+SynthDef(\sample_player_rate_var_proto, {
+	arg buf = 0, rate = 1, out_bus = 0, master_send_lvl_db = 0.0;
+	Out.ar(
+		out_bus,
+		dbamp(master_send_lvl_db) *
+		PlayBuf.ar(
+			2,
+			buf,
+			BufRateScale.kr(buf) * rate,
+			loop: 1
+		)
+	);
+}).add;
+
+
+~master_send = Bus.audio(s, 2);
+
+SynthDef(\master_proto, {
+	arg
+	    limit_lvl_db = -0.7
+	  , thresh = 0.5
+	  , slopeBelow = 1
+	  , slopeAbove = 1
+	  , compressor_out_lvl_db = 0
+	;
+	var in, out, master_send_lvl_db = 0, out_bus = 0, in_bus = 100;
+	in = In.ar(~master_send, 2);
+	// in = In.ar(in_bus, 2);
+	in = Compander.ar(
+		  in: in
+		, control: in
+		, thresh: thresh
+		, slopeBelow: slopeBelow
+		, slopeAbove: 1.0
+		, clampTime: 0.01
+		, relaxTime: 0.1
+		, mul: dbamp(compressor_out_lvl_db)
+	);
+	out = Limiter.ar(in, dbamp(limit_lvl_db));
+	out = LeakDC.ar(out);
+	Out.ar(out_bus, out * dbamp(master_send_lvl_db));
+}).add;
+)
 
 // Включаем финальную обработку
 (
@@ -65,35 +109,27 @@ Compiling directory "Название директории"
 // Надо запустить код из sampler.scd
 
 (
-// Загружаем семпл в специальную область памяти - буфер (Buffer). Это одномерный массив чисел, индексы начинаются с 0/
-~buf1 = Buffer.read(s, "C:/home/chernenko/audio/samples/arturia1.wav"); // Путь к файлу надо заменить
-~buf1.numChannels; //показывает кол-во каналов
+~glitch_loops_buf = Buffer.read(s, "C:/home/Admin/audio/44446__looplicator__glitch-loops-102025/830048__looplicator__128-bpm-industrial-glitch-loop-15441-wav.wav");
+~glitch_loops_buf.numChannels;
 
-~buf1_chnl1 = Buffer.readChannel(s, "C:/home/chernenko/audio/samples/arturia1.wav", channels: [0]);
-~buf1_chnl1.numChannels;
+~bird_calls_buf = Buffer.read(s, "C:/home/Admin/audio/40780__crk365__bird-calls.wav");
+~bird_calls_buf.numChannels;
 
-~buf2 = Buffer.read(s, "C:/home/chernenko/src/supercollider/hse/2023_24/lsn13/cl_solo_am.wav");
-~buf2.numChannels;
+~glitch_loops_mono_buf = Buffer.readChannel(s, "C:/home/Admin/audio/44446__looplicator__glitch-loops-102025/830048__looplicator__128-bpm-industrial-glitch-loop-15441-wav.wav", channels: [0]);
 
-~buf3 = Buffer.read(s, "C:/home/chernenko/audio/cons/2_2023_24/rec105/Media/05-rec line 2-231130_1232.wav");
-~buf3.numChannels;
+~glitch_loops_mono_buf.play;
 
-
-~buf4 = Buffer.read(s, "C:/home/chernenko/audio/cons/4_2023_24/record_korg/record_korg3.wav");
-~buf4.numChannels;
-
-~v_ni_buf_mono = Buffer.readChannel(s, "C:/home/chernenko/src/supercollider/hse/20024_25/discrete_midi_in/discrete_midi_in_frag1.wav", channels: [0]);
-
-
-~pad_buf = Buffer.read(s, "C:/home/chernenko/audio/samples/45426__timkahn__super-fm-pad-c3.aiff");
-~pad_buf.numChannels;
+~pf_buf = Buffer.read(s, "D:/audio/samples/05-rec line 2-231130_1232.wav"); // mono
+~pf_buf.play;
+~pf_buf.numChannels;
 )
+
 
 ////////////////////////
 //   simple play buf
 ////////////////////////
 
-~sample_player_rate_var = Synth(\sample_player_rate_var_proto, [\buf, ~pad_buf, \out_bus, ~master_send, \rate, 0.5]);
+~sample_player_rate_var = Synth(\sample_player_rate_var_proto, [\buf, ~glitch_loops_buf, \out_bus, ~master_send, \rate, 0.5]);
 ~sample_player_rate_var.free;
 
 (
@@ -186,11 +222,6 @@ SynthDef(\fx_fft_conformal_proto, {
 // Запускаем "снизу вверх", следим чтобы стек синтов соответствовал схеме
 s.plotTree;
 
-
-~sample_player_rate_var = Synth(\sample_player_rate_var_proto, [\buf, ~buf3, \out_bus, ~bin_shift_send, \rate, 0.5]);
-~sample_player_rate_var.free;
-
-
 (
 ~fx_fft_bin_shift = Synth(\fx_fft_bin_shift_proto, [
 	// \buf, ~buf1_chnl1,
@@ -201,6 +232,10 @@ s.plotTree;
 );
 )
 ~fx_fft_bin_shift.free;
+
+~sample_player_rate_var = Synth(\sample_player_rate_var_proto, [\buf, ~bird_calls_buf, \out_bus, ~bin_shift_send, \rate, 0.5]);
+~sample_player_rate_var.free;
+
 
 //////////////////////////////////////////////////
 // sample player
@@ -214,15 +249,6 @@ s.plotTree;
 // master
 
 (
-~sample_player_rate_var_scramble = Synth(\sample_player_rate_var_proto, [
-	\buf, ~buf3,
-	\out_bus, ~fft_scramble_send,
-	\rate, 0.5]
-);
-)
-~sample_player_rate_var_scramble.free;
-
-(
 ~fx_fft_scramble = Synth(\fx_fft_scramble_proto, [
 	// \buf, ~buf1_chnl1,
 	\in_bus, ~fft_scramble_send,
@@ -231,6 +257,14 @@ s.plotTree;
 )
 ~fx_fft_scramble.free;
 
+(
+~sample_player_rate_var_scramble = Synth(\sample_player_rate_var_proto, [
+	\buf, ~glitch_loops_buf,
+	\out_bus, ~fft_scramble_send,
+	\rate, 0.5]
+);
+)
+~sample_player_rate_var_scramble.free;
 
 
 //////////////////////////////////////////////////
@@ -248,24 +282,6 @@ s.plotTree;
 // master
 
 (
-~sample_player_rate_var_scramble = Synth(\sample_player_rate_var_proto, [
-	\buf, ~buf3,
-	\out_bus, ~fft_scramble_send,
-	\rate, 0.5]
-);
-)
-~sample_player_rate_var_scramble.free;
-
-(
-~fx_fft_scramble = Synth(\fx_fft_scramble_proto, [
-	\in_bus, ~fft_scramble_send,
-	\out_bus, ~bin_shift_send]
-);
-)
-~fx_fft_scramble.free;
-
-
-(
 ~fx_fft_bin_shift2 = Synth(\fx_fft_bin_shift_proto, [
 	\in_bus, ~bin_shift_send,
 	\out_bus, ~master_send,
@@ -275,6 +291,22 @@ s.plotTree;
 )
 ~fx_fft_bin_shift2.free;
 
+(
+~fx_fft_scramble = Synth(\fx_fft_scramble_proto, [
+	\in_bus, ~fft_scramble_send,
+	\out_bus, ~bin_shift_send]
+);
+)
+~fx_fft_scramble.free;
+
+(
+~sample_player_rate_var_scramble = Synth(\sample_player_rate_var_proto, [
+	\buf, ~bird_calls_buf,
+	\out_bus, ~fft_scramble_send,
+	\rate, 0.5]
+);
+)
+~sample_player_rate_var_scramble.free;
 
 
 //////////////////////////////////////////////////
@@ -291,31 +323,16 @@ s.plotTree;
 //               \/
 //             master
 
+
+/////////////////////////
 (
-~sample_player_rate_var_scramble = Synth(\sample_player_rate_var_proto, [
-	\buf, ~buf3,
-	\out_bus, ~bin_shift_send,
-	\rate, 0.5]
-);
-
-~sample_player_rate_var_scramble2 = Synth(\sample_player_rate_var_proto, [
-	\buf, ~buf3,
-	\out_bus, ~bin_shift2_send,
-	\rate, 0.5]
-);
-
-~sample_player_rate_var_scramble3 = Synth(\sample_player_rate_var_proto, [
-	\buf, ~buf3,
-	\out_bus, ~bin_shift3_send,
-	\rate, 0.5]
+~fx_fft_scramble = Synth(\fx_fft_scramble_proto, [
+	\in_bus, ~fft_scramble_send,
+	\out_bus, ~master_send]
 );
 )
+~fx_fft_scramble.free;
 
-(
-~sample_player_rate_var_scramble.free;
-~sample_player_rate_var_scramble2.free;
-~sample_player_rate_var_scramble3.free;
-)
 
 //////////
 
@@ -346,16 +363,32 @@ s.plotTree;
 ~fx_fft_bin_shift3.free;
 )
 
-
 /////////////////////////
 (
-~fx_fft_scramble = Synth(\fx_fft_scramble_proto, [
-	\in_bus, ~fft_scramble_send,
-	\out_bus, ~master_send]
+~sample_player_rate_var_scramble = Synth(\sample_player_rate_var_proto, [
+	\buf, ~glitch_loops_buf,
+	\out_bus, ~bin_shift_send,
+	\rate, 0.5]
+);
+
+~sample_player_rate_var_scramble2 = Synth(\sample_player_rate_var_proto, [
+	\buf, ~glitch_loops_buf,
+	\out_bus, ~bin_shift2_send,
+	\rate, 0.5]
+);
+
+~sample_player_rate_var_scramble3 = Synth(\sample_player_rate_var_proto, [
+	\buf, ~bird_calls_buf,
+	\out_bus, ~bin_shift3_send,
+	\rate, 0.5]
 );
 )
-~fx_fft_scramble.free;
 
+(
+~sample_player_rate_var_scramble.free;
+~sample_player_rate_var_scramble2.free;
+~sample_player_rate_var_scramble3.free;
+)
 
 //////////////////////////////////////////////////
 // sample player
@@ -369,16 +402,6 @@ s.plotTree;
 // master
 
 (
-~sample_player_rate_var_conformal = Synth(\sample_player_rate_var_proto, [
-	\buf, ~buf3,
-	\out_bus, ~fft_conformal_send,
-	\rate, 0.5]
-);
-)
-~sample_player_rate_var_conformal.free;
-
-
-(
 ~fx_fft_conformal = Synth(\fx_fft_conformal_proto, [
 	\in_bus, ~fft_conformal_send,
 	\out_bus, ~master_send]
@@ -386,6 +409,21 @@ s.plotTree;
 )
 ~fx_fft_conformal.free;
 
+
+(
+~sample_player_rate_var_conformal = Synth(\sample_player_rate_var_proto, [
+	\buf, ~bird_calls_buf,
+	\out_bus, ~fft_conformal_send,
+	\rate, 0.5]
+);
+)
+~sample_player_rate_var_conformal.free;
+
+////////////////////////////////////
+/*
+PV_RandComb in fft_fx.scd
+PV_BinShift in fftft
+*/
 
 /*
 Объекты для преобразования спектра в Frequency Domain
