@@ -95,6 +95,17 @@ Tuning.partch.semitones.collect(_.round(0.001));
 Tuning.partch.size;
 Tuning.partch.octaveRatio;
 
+
+(1..11).collect(_*((2 + 3/2)**(1/12)));
+
+(
+~duodec_et12_tun = Tuning.new(
+	(0..11).collect(_*((2 + 3/2)**(1/12))),
+	(2 + 3/2),
+	"duodec_et12"
+);
+)
+
 (
 Pdef(\pl4,
 	Pbind(
@@ -118,15 +129,6 @@ Pdef(\pl5,
 ).play;
 )
 
-(1..11).collect(_*((2 + 3/2)**(1/12)));
-
-(
-~duodec_et12_tun = Tuning.new(
-	(0..11).collect(_*((2 + 3/2)**(1/12))),
-	(2 + 3/2),
-	"duodec_et12"
-);
-)
 
 a = Scale.choose(7, 12).tuning_(Tuning.choose(12));
 a.tuning.name;
