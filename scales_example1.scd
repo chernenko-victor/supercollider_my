@@ -186,3 +186,150 @@ Pdef(\new_scale_pl,
 	)
 ).stop;
 )
+
+//////////////////////////////////////////
+Scale.directory;
+
+\ ahirbhairav: Ahirbhairav
+\ ajam: Ajam
+\ atharKurd: Athar Kurd
+\ augmented: Augmented
+\ augmented2: Augmented 2
+\ bartok: Bartok
+\ bastanikar: Bastanikar
+\ bayati: Bayati
+\ bhairav: Bhairav
+\ chinese: Chinese
+\ chromatic: Chromatic
+\ chromatic24: Chromatic 24
+\ diminished: Diminished
+\ diminished2: Diminished 2
+\ dorian: Dorian
+\ egyptian: Egyptian
+\ enigmatic: Enigmatic
+\ farahfaza: Farahfaza
+\ gong: Gong
+\ harmonicMajor: Harmonic Major
+\ harmonicMinor: Harmonic Minor
+\ hexAeolian: Hex Aeolian
+\ hexDorian: Hex Dorian
+\ hexMajor6: Hex Major 6
+\ hexMajor7: Hex Major 7
+\ hexPhrygian: Hex Phrygian
+\ hexSus: Hex Sus
+\ hijaz: Hijaz
+\ hijazDesc: Hijaz Descending
+\ hijazKar: hijazKar
+\ hindu: Hindu
+\ hirajoshi: Hirajoshi
+\ hungarianMinor: Hungarian Minor
+\ husseini: Husseini
+\ huzam: Huzam
+\ indian: Indian
+\ ionian: Ionian
+\ iraq: Iraq
+\ iwato: Iwato
+\ jiao: Jiao
+\ jiharkah: Jiharkah
+\ karjighar: Karjighar
+\ kijazKarKurd: Kijaz Kar Kurd
+\ kumoi: Kumai
+\ kurd: Kurd
+\ leadingWhole: Leading Whole Tone
+\ locrian: Locrian
+\ locrianMajor: Locrian Major
+\ lydian: Lydian
+\ lydianMinor: Lydian Minor
+\ mahur: Mahur
+\ major: Major
+\ majorPentatonic: Major Pentatonic
+\ marva: Marva
+\ melodicMajor: Melodic Major
+\ melodicMinor: Melodic Minor
+\ melodicMinorDesc: Melodic Minor Descending
+\ minor: Natural Minor
+\ minorPentatonic: Minor Pentatonic
+\ mixolydian: Mixolydian
+\ murassah: Murassah
+\ mustar: Mustar
+\ nahawand: Nahawand
+\ nahawandDesc: Nahawand Descending
+\ nairuz: Nairuz
+\ nawaAthar: Nawa Athar
+\ neapolitanMajor: Neapolitan Major
+\ neapolitanMinor: Neapolitan Minor
+\ nikriz: Nikriz
+\ partch_o1: Partch Otonality 1
+\ partch_o2: Partch Otonality 2
+\ partch_o3: Partch Otonality 3
+\ partch_o4: Partch Otonality 4
+\ partch_o5: Partch Otonality 5
+\ partch_o6: Partch Otonality 6
+\ partch_u1: Partch Utonality 1
+\ partch_u2: Partch Utonality 2
+\ partch_u3: Partch Utonality 3
+\ partch_u4: Partch Utonality 4
+\ partch_u5: Partch Utonality 5
+\ partch_u6: Partch Utonality 6
+\ pelog: Pelog
+\ phrygian: Phrygian
+\ prometheus: Prometheus
+\ purvi: Purvi
+\ rast: Rast
+\ rastDesc: Rast Descending
+\ ritusen: Ritusen
+\ romanianMinor: Romanian Minor
+\ saba: Saba
+\ scriabin: Scriabin
+\ shang: Shang
+\ shawqAfza: Shawq Afza
+\ sikah: Sikah
+\ sikahDesc: Sikah Descending
+\ spanish: Spanish
+\ superLocrian: Super Locrian
+\ suznak: Suznak
+\ todi: Todi
+\ ushaqMashri: Ushaq Mashri
+\ whole: Whole Tone
+\ yakah: Yakah
+\ yakahDesc: Yakah Descending
+\ yu: Yu
+\ zamzam: Zamzam
+\ zanjaran: Zanjaran
+\ zhi: Zhi
+
+
+Scale.ionian;
+/*
+-> Scale(
+    [0, 2, 4, 5, 7, 9, 11],
+    12,
+    Tuning(
+        [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0],
+         2.0,
+         "ET12"),
+         "Ionian"
+    )
+*/
+
+Scale.dorian;
+/*
+-> Scale(
+    [0, 2, 3, 5, 7, 9, 10],
+    12,
+    Tuning(
+        [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0],
+        2.0,
+        "ET12"
+    ),
+    "Dorian"
+)
+*/
+
+ScaleAD
+ScaleLP
+ScaleStream
+
+~ionian_just_modus = Scale.ionian(\just);
+~ionian_just_modus.degrees; // same as ionian et12
+~ionian_just_modus.semitones

@@ -67,6 +67,23 @@ a.setn(\amps, Array.rand(4, 0.01, 0.25));
 a.free;
 
 ///////////////////////////////////////
+/// mod parameters
+
+(
+{#[220, 440, 880, 1760] * [
+	LFNoise2.kr(1).range(0.5, 1.5),
+	LFNoise2.kr(1).range(0.5, 1.5),
+	LFNoise2.kr(1).range(0.5, 1.5),
+	LFNoise2.kr(1).range(0.5, 1.5),
+];}.plot(5);
+)
+
+
+(
+{#[220, 440, 880, 1760] * ({LFNoise2.kr(1).range(0.5, 1.5)}.dup(4));}.plot(5);
+)
+
+///////////////////////////////////////
 // filtering, substractive
 
 
@@ -150,6 +167,25 @@ Pdef(\dynklank_param_pl,
 
 ~dynklank.free;
 
+
+////////////////////////////////////////
+// delay and filtering
+
+{ CombN.ar(WhiteNoise.ar(0.01), 0.01, XLine.kr(0.0001, 0.01, 20), 0.2) }.play;
+
+// Since the allpass delay has no audible effect as a resonator on
+// steady-state sound ...
+
+{ AllpassC.ar(WhiteNoise.ar(0.1), 0.01, XLine.kr(0.0001, 0.01, 20), 0.2) }.play;
+
+// ...these examples add the input to the effected sound and compare variants so that you can hear
+// the effect of the phase comb:
+
+(
+{
+    z = WhiteNoise.ar(0.2);
+    z + AllpassN.ar(z, 0.01, XLine.kr(0.0001, 0.01, 20), 0.2)
+}.play)
 
 // ================================
 //            Granulation +
@@ -262,13 +298,55 @@ PatternConductor
 ///////////////////////////////////////
 // composition
 
+
 ///////////////////////////////////////
 // grain
 // lsn7 ...
 
+
 // granular time stretcher and pitchshifter.
 Warp1
+// poslushajte_bolshe
+
+
+// granular pitch shift
+PitchShift
+
 
 // fft
 // lsn8 ...
+PV_MagMul
+PV_CopyPhase
+PV_Mul
+PV_Add
+
+PV_BinScramble
+scramble bins
+PV_BinShift
+shift and stretch bin position
+PV_CopyPhase
+copy magnitudes and phases
+PV_Diffuser
+random phase shifting
+PV_MagFreeze
+freeze magnitudes
+PV_MagMul
+multiply magnitudes
+PV_MagDiv
+division of magnitudes
+PV_MagShift
+shift and stretch magnitude bin position
+PV_MagSmear
+average magnitudes across bins
+PV_PhaseShift
+shift phase of all bins
+
+// https://doc.sccode.org/Guides/FFT-Overview.html
+
+Convolution
+PartConv
+
+// pitch follower
+ZeroCrossing
+Pitch
 

@@ -26,7 +26,7 @@ s.plotTree;
 ~listen_bus1_pl = ~listen_bus1.play;
 ~form_gen_pl = ~form_gen.play(args: [\part_len, ~piece_len]);
 ~piece_form_clock = TempoClock.new(1);
-~piece_form_clock.sched(~piece_len, {
+~piece_form_clock.sched(~piece_len-4, {
 	~listen_bus1_pl.free;
 	nil;
 });

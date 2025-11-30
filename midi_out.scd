@@ -6,6 +6,7 @@ m.noteOff(16, 60, 60);
 
 (
 ~midi_pitch = rrand(60, 80);
+~midi_pitch.postln;
 m.noteOn(16, ~midi_pitch, rrand(50, 80));
 )
 
@@ -76,7 +77,7 @@ Pdef(\midi_out_pl,
 
 		\type, \midi,
 		\midiout, m,
-        \degree, 0, //
+        \degree, Pseq([32, 64, 98], inf), //
 
 		\midicmd, \control, // Specify the MIDI command type
     \ctlNum, 11, // Control number (e.g., volume)
@@ -84,6 +85,22 @@ Pdef(\midi_out_pl,
     \chan, 0, // MIDI channel
 
     \dur, 1 // Duration
+	)
+).stop;
+)
+
+(
+Pdef(
+	\midinote_seq,
+	Pbind(
+		\type, \midi,
+		\midicmd, \noteOn,
+		\midiout, m,
+		\chan, 0,
+		\degree, Pwhite(-7, 12, inf),
+		\dur, Pwrand([0.25, Pn(0.125, 2)], #[0.8, 0.2], inf),
+		\legato, sin(Ptime(inf) * 0.5).linexp(-1, 1, 1/3, 3),
+		\amp, Pexprand(0.5, 1.0, inf)
 	)
 ).stop;
 )
