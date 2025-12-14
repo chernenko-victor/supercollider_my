@@ -4,6 +4,23 @@
 
 ~test_ptrn.asStream.nextN(10);
 
+
+~test_ptrn2 = Pseries(32, {[2, 3].choose}, inf); // no function
+
+~test_ptrn2.asStream.nextN(10);
+
+
+~test_ptrn3 = Pseries(32, Prand([2, 3], inf), inf); // no function
+
+~test_ptrn3.asStream.nextN(10);
+
+
+
+~test_ptrn4 = Pseries({ rrand(0, 7) }, Prand([2, 3], inf), inf); // no function
+
+~test_ptrn4.asStream.nextN(10);
+
+
 Pseries({ rrand(0, 7) }, 1, { rrand(4, 8) });
 Prand(Pseries({ rrand(0, 7) }, 1, { rrand(4, 8) }), 1);
 

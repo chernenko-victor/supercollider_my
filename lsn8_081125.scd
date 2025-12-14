@@ -461,6 +461,34 @@ chain = chain.pvcollect(b.numFrames, {|mag, phase, index|
 		mag + DelayN.kr(mag, 1, v);
 	}, frombin: 0, tobin: 256, zeroothers: 1);
 */
+
+// process bins by user's fuction
+(
+{
+    var chain = FFT(LocalBuf(64), hop: 1);
+    chain.fftSize.poll;
+    0.0
+}.play;
+)
+
+chain.pvcalc(..., {
+	 |magnitudes, phases| // this is array
+    [mags.reverse, phases.reverse]
+}
+chain.pvcalc2 // same for 2 signals
+
+.pvcollect(numframes, {
+	// applying a function to each bin of an FFT chain.
+	|magnitude, phase, bin, index|
+    // randomize magnitudes somewhat (noisier signal)
+    [magnitude * (5.0.rand2.dbamp), phase]
+}
+
+UnpackFFT
+PackFFT
+
+MovingAverage
+
 /////////////////////////////////////////////
 // Выключаем блок финальной обработки
 

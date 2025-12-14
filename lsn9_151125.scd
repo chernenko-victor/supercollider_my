@@ -194,6 +194,8 @@ Pdef(\dynklank_param_pl,
 // ================================
 // see lsn 8
 
+// bus control maping to synth arg actually in lsn7
+
 // create multichannel controls directly with literal arrays:
 (
 SynthDef('help-dynKlank', { |out,
@@ -315,6 +317,7 @@ PitchShift
 
 // fft
 // lsn8 ...
+
 PV_MagMul
 PV_CopyPhase
 PV_Mul

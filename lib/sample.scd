@@ -180,6 +180,70 @@ SynthDef(\granulator2_proto, {
 	Out.ar(out_bus, out * dbamp(master_send_lvl_db));
 }).add;
 
+SynthDef(\write_to_buf_and_wrap__proto, {
+	arg bus_out = 0, bus_rec = 1000;
+	var
+	  buf = 0, // read_write_buf
+	  pointer,
+	  pitch,
+	  degree,
+	  bus_in = 0,
+	  sig_in,
+	  sig_out
+	;
+
+	sig_in = In.ar(bus_in, 1);
+
+	RecordBuf.ar(
+		sig_in,
+		bufnum: buf,
+		loop: 1
+	);
+
+	pointer = LFSaw.ar(1/30).range(0, 1);
+    // control pitch with MouseX
+	degree = TRand.kr(1, 10, Impulse.kr(0.5)).ceil; // .poll
+	// pitch = MouseX.kr(0.5, 2);
+	pitch = pow(1.036, degree); // .poll
+
+	sig_out = Warp1.ar(
+        numChannels: 1,
+        bufnum: buf,
+        pointer: pointer,
+        freqScale: pitch,
+        windowSize: 0.1,
+        envbufnum: -1, // Hanning envelope
+        overlaps: 8,
+        windowRandRatio: 0.1,
+        interp: 2
+    );
+
+	Out.ar(bus_out, Pan2.ar(sig_out, 0.1));
+	Out.ar(bus_rec, Pan2.ar(sig_out, 0.1));
+}
+).add;
+
+// granulator, send to 'write to buf + wrap'
+SynthDef(\granulator_send_to_wrap__proto,
+{
+	arg buf = 0, bus_out = 0, bus_rec = 1000, rate_lo = 0.05, rate_hi = 30;
+	var rate, sig_out, bus_send1 = 1001; // 'bus_send1' for write to buf
+	sig_out = TGrains.ar(
+		1,
+		Impulse.ar(
+			LFNoise2.kr(0.1).exprange(rate_lo, rate_hi).reciprocal //.poll
+		),
+		buf,
+		BufRateScale.ir(buf),
+		centerPos: LFNoise2.kr(0.13).range(0, BufDur.kr(buf)), // MouseX.kr(0, BufDur.kr(buf)),
+		dur: LFNoise0.kr(3).range(0.01, BufDur.kr(buf)/4)
+	);
+
+	Out.ar(bus_send1, sig_out);
+	Out.ar(bus_out, Pan2.ar(sig_out, -0.3));
+	Out.ar(bus_rec, Pan2.ar(sig_out, -0.3));
+}).add;
+
 )
 
 ////////////////////////////////////////
