@@ -54,7 +54,7 @@ s.plotTree;
 	// ["list = ", list, "item = ", item].postln;
 	list.do({
 		arg curr_item, i;
-		["i = ", i].postln;
+		// ["i = ", i].postln;
 		if(
 			list[i] == item,
 			{
@@ -65,10 +65,37 @@ s.plotTree;
 	res;
 };
 
+~count_in_list = {
+	arg list, item;
+	var res = 0;
+	// ["list = ", list, "item = ", item].postln;
+	list.do({
+		arg curr_item, i;
+		// ["i = ", i].postln;
+		if(
+			list[i] == item,
+			{
+				res = res + 1;
+			}
+		);
+	});
+	res;
+};
+
 ~change_dencity = {
-	arg direction = 1, parts_status_list, parts_start_list, parts_stop_list;
-	var part_index;
+	arg
+	  direction = 1,
+	  parts_status_list,
+	  parts_start_list,
+	  parts_stop_list,
+	  limit_parts_status_list = 0 // 0 means at least 1 part will be played always
+	;
+
+	var part_index, part_index_count;
+
 	// ["direction = ", direction, "parts_status_list = ", parts_status_list, "parts_start_list = ", parts_start_list, "parts_stop_list = ", parts_stop_list].postln;
+
+	part_index_count = ~count_in_list.(parts_status_list, -1 * direction);
 	part_index = ~find_in_list.(parts_status_list, -1 * direction);
 	if(
 		part_index != -1,
@@ -81,10 +108,15 @@ s.plotTree;
 					(parts_start_list[part_index]).()
 				},
 				{
-					(parts_stop_list[part_index]).()
+					if(
+						part_index_count != 1, // no stop last part!
+						{
+							(parts_stop_list[part_index]).()
+						}
+					);
 				}
 			);
-		},
+		}
 	);
 };
 
