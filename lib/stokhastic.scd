@@ -35,6 +35,13 @@
 	(rand1 + rand2)/2;
 };
 
+~markov_func__stokhastic_lib = {
+	arg last_index, markov_arr; //, index_arr
+	var index_arr;
+	index_arr = (0..(markov_arr[0].size - 1));
+	index_arr.wchoose(markov_arr[last_index]);
+};
+
 /* =====================================================================
 =================== different types of distribution ====================
 
@@ -43,8 +50,8 @@
 3    continuous linear min
 4    continuous linear max
 5    continuous triangle
+6    discrete weighted
 //2DO
-//6    discrete weighted
 //7    markov 2d
 ======================================================================== */
 ~get_rand_val = {
@@ -55,6 +62,7 @@
 	    , max_val = 1.0
 	    , weight_arr = [] // normalized
 	    , markov2d_arr = [] // normalized
+	    , markov_last_indx = 0
 	;
 
 	switch(distr_type)
@@ -78,6 +86,9 @@
 	  {6} {
 		weight_arr = weight_arr.normalizeSum;
 		value_arr.wchoose(weight_arr);
+	  }
+	  {7} {
+		~markov_func__stokhastic_lib.(markov_last_indx, markov2d_arr);
 	  }
 	;
 };

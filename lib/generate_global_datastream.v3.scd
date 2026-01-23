@@ -109,9 +109,12 @@ s.plotTree;
 				},
 				{
 					if(
-						part_index_count != 1, // no stop last part!
+						part_index_count != 1,
 						{
-							(parts_stop_list[part_index]).()
+							(parts_stop_list[part_index]).(); // stop if not last part
+						},
+						{
+							parts_status_list[part_index] = -1 * direction; // no stop last part!
 						}
 					);
 				}

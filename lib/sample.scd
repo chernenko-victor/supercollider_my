@@ -223,11 +223,28 @@ SynthDef(\write_to_buf_and_wrap__proto, {
 }
 ).add;
 
-// granulator, send to 'write to buf + wrap'
-SynthDef(\granulator_send_to_wrap__proto,
+// granulator with send to rec and 1 addition send
+SynthDef(\granulator_rec_1fx_send__proto,
 {
-	arg buf = 0, bus_out = 0, bus_rec = 1000, rate_lo = 0.05, rate_hi = 30;
-	var rate, sig_out, bus_send1 = 1001; // 'bus_send1' for write to buf
+	arg
+		buf = 0,
+		out_bus = 0,
+		rec_bus = 1000,
+		rate_lo = 0.05,
+		rate_hi = 30,
+		send_fx1_bus = 1001,
+		master_send_lvl_db = 0,
+		master_pos = 0,
+		rec_send_lvl_db = 0,
+		rec_pos = 0,
+		fx1_send_lvl_db = 0,
+		dur_ratio = 1,
+		center_pos_change_freq = 0.133
+	;
+	var
+		rate,
+		sig_out
+	;
 	sig_out = TGrains.ar(
 		1,
 		Impulse.ar(
@@ -235,19 +252,43 @@ SynthDef(\granulator_send_to_wrap__proto,
 		),
 		buf,
 		BufRateScale.ir(buf),
-		centerPos: LFNoise2.kr(0.13).range(0, BufDur.kr(buf)), // MouseX.kr(0, BufDur.kr(buf)),
-		dur: LFNoise0.kr(3).range(0.01, BufDur.kr(buf)/4)
+		centerPos: LFNoise2.kr(center_pos_change_freq).range(0, BufDur.kr(buf)), // MouseX.kr(0, BufDur.kr(buf)),
+		dur: LFNoise0.kr(0.3).range(0.01, BufDur.kr(buf)) * dur_ratio
 	);
 
-	Out.ar(bus_send1, sig_out);
-	Out.ar(bus_out, Pan2.ar(sig_out, -0.3));
-	Out.ar(bus_rec, Pan2.ar(sig_out, -0.3));
+	Out.ar(send_fx1_bus, sig_out * dbamp(fx1_send_lvl_db));
+	Out.ar(out_bus, Pan2.ar(sig_out, master_pos) * dbamp(master_send_lvl_db));
+	Out.ar(rec_bus, Pan2.ar(sig_out, rec_pos) * dbamp(rec_send_lvl_db));
 }).add;
 
 )
 
 ////////////////////////////////////////
 //           examples
+
+/*
+// download 2 channel samples from directory
+(
+~scream_buf_arr = PathName("D:/audio/music/poslushajte_bolshe/vocal_stems1").entries.collect({
+	arg sample_path;
+	Buffer.read(s, sample_path.fullPath);
+});
+)
+~scream_buf_arr.choose.play;
+~scream_buf_arr.choose.numChannels;
+
+// 3
+// download 1 channel samples from directory (e.g. for granulator)
+(
+~scream_buf_mono_arr = PathName("D:/audio/music/poslushajte_bolshe/vocal_stems1").entries.collect({
+	arg sample_path;
+	Buffer.readChannel(s, sample_path.fullPath, channels: [0]);
+});
+)
+
+~scream_buf_mono_arr.choose.numChannels;
+~scream_buf_mono_arr.choose.play;
+*/
 
 // ~sample_player_rate_var = Synth(\sample_player_rate_var_proto, [\buf, ~pf1_buf, \out_bus, ~master_send, \rate, 0.5]);
 // ~sample_player_rate_var.free;
