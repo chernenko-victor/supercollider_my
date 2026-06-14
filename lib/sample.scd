@@ -1,18 +1,17 @@
-// read some test samples to buffer
 (
+
+// read some test samples to buffer
+
 // ~arturia1_buf = Buffer.read(s, "C:/home/chernenko/audio/samples/arturia2.wav");
 // ~arturia1_mono_buf = Buffer.readChannel(s, "C:/home/chernenko/audio/samples/arturia2.wav", channels: 0);
 
 ~pf1_buf = Buffer.read(s, "D:/audio/samples/04-mic2-231205_1439.wav");
 ~pf1_mono_buf = Buffer.readChannel(s, "D:/audio/samples/04-mic2-231205_1439.wav", channels: 0);
-)
 
 
 // to listen example, send it output tu master
 // ~master = Synth(\master_proto, [\in_bus, ~master_send]);
 
-
-(
 SynthDef(\player_proto, {
 	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0;
 	var out;
@@ -254,6 +253,44 @@ SynthDef(\granulator_rec_1fx_send__proto,
 		BufRateScale.ir(buf),
 		centerPos: LFNoise2.kr(center_pos_change_freq).range(0, BufDur.kr(buf)), // MouseX.kr(0, BufDur.kr(buf)),
 		dur: LFNoise0.kr(0.3).range(0.01, BufDur.kr(buf)) * dur_ratio
+	);
+
+	Out.ar(send_fx1_bus, sig_out * dbamp(fx1_send_lvl_db));
+	Out.ar(out_bus, Pan2.ar(sig_out, master_pos) * dbamp(master_send_lvl_db));
+	Out.ar(rec_bus, Pan2.ar(sig_out, rec_pos) * dbamp(rec_send_lvl_db));
+}).add;
+
+// granulator with send to rec and 1 addition send
+SynthDef(\granulator_rate_ctrl_rec_1fx_send__proto,
+{
+	arg
+		buf = 0,
+		out_bus = 0,
+		rec_bus = 1000,
+		rate_lo = 0.05,
+		rate_hi = 30,
+		send_fx1_bus = 1001,
+		master_send_lvl_db = 0,
+		master_pos = 0,
+		rec_send_lvl_db = 0,
+		rec_pos = 0,
+		fx1_send_lvl_db = 0,
+		dur_ratio = 1,
+		center_pos_change_freq = 0.133,
+		rate = 0.1
+	;
+	var
+		sig_out
+	;
+	sig_out = TGrains.ar(
+		1,
+		rate,
+		buf,
+		BufRateScale.ir(buf),
+		//centerPos: LFNoise2.kr(center_pos_change_freq).range(0, BufDur.kr(buf)), // MouseX.kr(0, BufDur.kr(buf)),
+		centerPos: BufDur.kr(buf)/2,
+			// dur: LFNoise0.kr(0.3).range(0.01, BufDur.kr(buf)) * dur_ratio
+		dur: BufDur.kr(buf)
 	);
 
 	Out.ar(send_fx1_bus, sig_out * dbamp(fx1_send_lvl_db));

@@ -1,4 +1,4 @@
-s.plotTree;
+// s.plotTree;
 
 (
 ~form_ctlr = Bus.control(s, 1);
@@ -124,7 +124,7 @@ s.plotTree;
 };
 
 )
-
+/*
 (
 ~piece_len = 30;
 ~piece_form = Env.pairs({ { 1.0.rand } ! 2 } ! 6, \exp);
@@ -136,5 +136,4 @@ s.plotTree;
 	nil;
 });
 )
-
-
+*/
