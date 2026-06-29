@@ -102,7 +102,7 @@ SCLOrkSynths.gui;
 // convert function to synth
 
 
-
+/////////////////////////
 (
 {
 	arg freq = 440;
@@ -575,6 +575,7 @@ C:\home\Admin\src\supercollider\supercollider_my\lsn7_011125.scd
 // feedback.sc
 
 // SinOscFB
+https://grm.tools/en/atelier.html#title-section-modules
 
 
 
