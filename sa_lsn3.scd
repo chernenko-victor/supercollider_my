@@ -50,6 +50,14 @@ Pdef(
 ).quant_(1).stop;
 )
 
+~pl1.mute;
+~pl1.unmute;
+
+~pl1.resume; // restart from stop point
+
+~pl1.reset; // restart from stop begin
+
+
 // include fx
 // include additive
 
@@ -262,6 +270,51 @@ Logistic
 { SinOsc.ar(StandardL.ar(40, MouseX.kr(0.9, 4))*800+900)*0.4 }.asSynthDef(fadeTime: , name: \standard_control__proto).add;
 )
 
+/////////////////////////
+
+(
+~clk4 = TempoClock.new(2); // set BPS to 2 beats per sec
+
+/*
+~pl4 = Pbind(
+	\amp, Pseq([0.05, 0.1, 0.2], inf),
+	\degree, Pseq([0, 2, 3, 4], inf),
+	\dur, Pseq([1, 2, 0.25, Rest(1), 0.5, Rest(2)], inf)
+).play(clock: ~clk4, quant: 4);
+*/
+
+Pdef(
+	\quant_tempo,
+	Pbind(
+	  \amp, Pseq([0.05, 0.1, 0.2], inf),
+	  \degree, Pseq([0, 2, 3, 4], inf),
+	  \dur, Pseq([1, 2, 0.25, Rest(1), 0.5, Rest(2)], inf)
+    )
+).play(argClock: ~clk4, quant: 4);
+)
+
+~clk4.tempo = 4; // change BPS while Pbind playing
+
+/*
+Prand([
+	Pbind,
+	Pbind,
+	[Pbind, ...]
+])
+*/
+
+
+(
+Pbind(
+	// \instrument, \var_saw_proto,
+	// \note, Pwalk((1..12), 1, 1, 7).trace, // chromatic movement, up direction
+	\note, Pwalk((1..12), 1, Pseq([-1, 1], inf), 7).trace, // up-down direction
+	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Pseq([-1, 1], inf), 7).trace, // step variation
+	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Prand([-1, 1], inf), 7).trace, // random direction
+	\amp, Pwalk((1..8) * 0.1, 1, Prand([-1, 1]), 3),
+	\dur, 0.25,
+).play;
+)
 
 /////////////////////////
 
@@ -298,3 +351,35 @@ OSCdef(\ampListener, { |msg|
 )
 
 ~substr_example.release;
+
+//////////////////////////////
+
+~test_clk = TempoClock.new(1);
+~test_clk.beats;
+
+(
+Pdef(\test_ptrn_pl,
+	Pbind(
+		\degree, Prand(
+			// [1, 3, 6, 8] + Prand([0, 1, 4], 1),
+			//([0, 0, 0, 0] + {rrand(1, 7)}),
+			//(1 .. 20).clump(4),
+			(1 .. 20).clump(4).lace(20).clump(4),
+			inf
+		),
+		\dur, Prand((1 .. 6) * 0.25, inf),
+		\strum, Pwhite(0.05, 0.5, inf),
+		\legato, Pexprand(0.1, 1, inf),
+		// \instrument, \cheappiano,
+		\scale, Scale.choose,
+		\amp, Pexprand(0.001, 0.3, inf),
+	).trace
+).play(~test_clk);
+)
+
+~test_clk.tempo = 0.3
+
+(
+Pdef(\test_ptrn_pl).stop;
+~test_clk.stop;
+)

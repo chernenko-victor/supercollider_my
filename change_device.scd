@@ -11,6 +11,11 @@ ServerOptions.inDevices; // входные
 
 o = Server.default.options;
 
+/*
+In: Windows WASAPI : Набор микрофонов (Realtek(R) Audio)
+  Out: Windows WASAPI : Наушники (Realtek(R) Audio)
+*/
+
 // CRASHES!!! WTF?
 // o.device;
 //
@@ -21,6 +26,10 @@ o = Server.default.options;
 // /*o.device ="Windows DirectSound : Headphones (USB AUDIO DEVICE)";*/
 // o.device = "Windows WDM-KS : Headphones (USB AUDIO DEVICE)";
 // o.device = nil;            // или используем устройство по умолчанию
+
+o.outDevice_("Windows WASAPI : CABLE Input (VB-Audio Virtual Cable)");
+
+o.outDevice = nil;
 
 o.outDevice_("Windows DirectSound : Headphones (USB AUDIO DEVICE)"); // works well with csound
 
@@ -52,3 +61,14 @@ Server.default.reboot;
 )
 
 s.plotTree;
+
+
+s.sampleRate; // Check sample rate
+s.options.blockSize; // Check control block size (internal)
+
+s.options.hardwareBufferSize; // nil means default
+// s.options.hardwareBufferSize = 128;
+
+s.options.numBuffers; // for BufRead ...
+
+s.options.sampleRate;
