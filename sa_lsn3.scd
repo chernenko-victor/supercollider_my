@@ -249,10 +249,20 @@ Pdefn(
 		MouseY.kr(1, 0.3)
 	)*800+900
 )
-* 0.04 ! 2 }.scope(s);
+* 0.04 ! 2 }.scope();
 )
 
 LatoocarfianL
+
+(
+{
+HenonC.ar(
+		4,
+		MouseX.kr(1, 1.4),
+		MouseY.kr(1, 0.3)
+	);
+}.scope;
+)
 
 FBSineC
 
@@ -263,6 +273,60 @@ FBSineC
 
 Logistic
 
+
+//////////////////////////
+//
+// Change data between synth by Bus.control
+
+
+// ....
+
+//////////////////////////
+//
+// Change data between synth by OSC
+
+
+s.boot;
+
+// Создаем синт, который отсылает значение генератора 10 раз в секунду (Impulse.kr)
+(
+x = {
+    // var freq = LFNoise2.kr(10).range(200, 1000); // Генерируем случайную частоту
+	var freq =
+	  HenonC.ar(
+		0.3,
+		MouseX.kr(1, 1.4),
+		MouseY.kr(1, 0.3)
+	  )*800+900
+    ;
+
+    // Отправляем 'freq' на клиент по команде '/my_frequency'
+    SendReply.kr(Impulse.kr(10), '/my_frequency', freq);
+    // SinOsc.ar(freq) * 0.1;
+}.play;
+)
+
+// Регистрируем OSC-обработчик на клиенте
+(
+~oscFunc = OSCFunc({ |msg|
+    var frequency = msg[3]; // Значения начинаются с 3-го индекса
+    ("Полученное значение частоты:" + frequency).postln;
+	~additive_example1.set(\freq, frequency);
+}, '/my_frequency').add;
+)
+
+// Очистка
+~oscFunc.free;
+x.free;
+
+
+~additive_example1 = Synth(\additive_example__proto, args: [\freq, 220 + (10.rand * 20)]);
+
+
+~additive_example1.set(\freq, 220 + (10.rand * 20));
+
+
+~additive_example1.release;
 
 //////////////////////////
 
@@ -323,7 +387,7 @@ NetAddr.langPort;
 OSCFunc.trace(true); // Turn posting on
 OSCFunc.trace(false); // Turn posting off
 
-~substr_example = Synth(\substr_example__proto, args: [\freq, 440]);
+~substr_example = Synth(\additive_example__proto, args: [\freq, 440]);
 
 
 (
@@ -353,6 +417,22 @@ OSCdef(\ampListener, { |msg|
 ~substr_example.release;
 
 //////////////////////////////
+// 
+// OSC send
+
+
+~remote_port = 65535
+~remote_ip = 1.2.3.4
+
+// send message to remote
+b = NetAddr.new(~remote_ip, ~remote_port);    // create the NetAddr
+b.sendMsg("/fader1", 0.5);
+b.free;
+
+
+//////////////////////////////
+// 
+// legato
 
 ~test_clk = TempoClock.new(1);
 ~test_clk.beats;
