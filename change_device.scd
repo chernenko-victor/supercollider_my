@@ -1,3 +1,15 @@
+// ========================================
+// ===============    NB   ================
+// ========================================
+
+// reboot needed after all changes to server options
+
+
+
+// ====================================================
+// ===============    change devices   ================
+// ====================================================
+
 ServerOptions.devices; // все устройства
 ServerOptions.inDevices; // входные
 ~devArr = ServerOptions.outDevices; // выходные
@@ -5,28 +17,13 @@ ServerOptions.inDevices; // входные
 (
 ~devArr.do({
 	arg i;
-	~devArr[i].postln;
+	i.postln;
 });
 )
 
-o = Server.default.options;
+o = Server.default.options; // or simply o = s.options;
 
-/*
-In: Windows WASAPI : Набор микрофонов (Realtek(R) Audio)
-  Out: Windows WASAPI : Наушники (Realtek(R) Audio)
-*/
-
-// CRASHES!!! WTF?
-// o.device;
-//
-// o.numOutputBusChannel;
-//
-// //переключить устройство
-// // o.device ="ASIO : ReaRoute ASIO (x64)";     // в кавычках пишем название устройства из списка
-// /*o.device ="Windows DirectSound : Headphones (USB AUDIO DEVICE)";*/
-// o.device = "Windows WDM-KS : Headphones (USB AUDIO DEVICE)";
-// o.device = nil;            // или используем устройство по умолчанию
-
+// переключить устройство
 o.outDevice_("Windows WASAPI : CABLE Input (VB-Audio Virtual Cable)");
 
 o.outDevice = nil;
@@ -64,11 +61,31 @@ s.plotTree;
 
 
 s.sampleRate; // Check sample rate
+
+
+// but developer had an great idea to make users more troubles
+// so to change sample rate not
+// s.sampleRate = 44100 but
+// but
+s.options.sampleRate = 44100;
+
+
+// enough troubles? No!
+// more troubles for good of troubles!!!!!!
+s.memSize; // trow error
+// only
+
+s.options.memSize;
+
 s.options.blockSize; // Check control block size (internal)
+s.options.blockSize = 128; // set new blockSize
+// reboot
+
+s.blockSize; // trow error
 
 s.options.hardwareBufferSize; // nil means default
 // s.options.hardwareBufferSize = 128;
 
 s.options.numBuffers; // for BufRead ...
+// s.numBuffers;
 
-s.options.sampleRate;

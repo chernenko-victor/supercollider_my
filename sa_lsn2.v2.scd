@@ -124,9 +124,9 @@ Scale.directory;
 
 // p = Pxrand([
 // 	Pbind( ... ,
-// 		Pbind( ... ,
+// 	Pbind( ... ,
 // 			...
-// 	], inf).play;
+// ], inf).play;
 
 (
 Pdef(\movements4_ptrn_pl,
@@ -287,7 +287,7 @@ Pdef(\test_ptrn_pl).stop;
 )
 
 ///////////////
-// quantisation
+// quantization
 
 Pdef(\myPattern, Pbind(
     \instrument, \default,
