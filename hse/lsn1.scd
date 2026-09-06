@@ -68,6 +68,28 @@ s.options.outDevice = nil;
 
 Pbind().play;
 
+(
+~seq_for_fm2 = Pbind(
+	\instrument, \FMRhodes1,
+	\freq, Pser(([1, 2, 4, 8] * 110).scramble, inf),
+	\dur, Pser([1, 2, 4] * 0.25, inf),
+	\amp, 0.5,
+	\lfoSpeed, Pser([1, 2, 4, 8], inf),
+).play;
+)
+
+
+(1, 3..10)
+
+
+[1, 2, 4, 8].reverse
+
+[1, 2, 4, 8].scramble
+
+
+~seq_for_fm2.stop;
+
+~seq2.stop;
 
 // ===================
 // no sound?
@@ -185,6 +207,43 @@ SynthDef(\FMRhodes2, {
 
     Out.ar(out, snd);
 }).add;
+)
+
+
+(
+SynthDef(\FMRhodes1, {
+    arg
+    // standard meanings
+    out = 0, freq = 440, gate = 1, pan = 0, amp = 0.1, att = 0.001, rel = 1, lfoSpeed = 4.8, inputLevel = 0.2,
+    // all of these range from 0 to 1
+    modIndex = 0.2, mix = 0.2, lfoDepth = 0.1;
+
+    var env1, env2, env3, env4;
+    var osc1, osc2, osc3, osc4, snd;
+
+    env1 = Env.perc(att, rel * 1.25, inputLevel, curve: \lin).kr;
+    env2 = Env.perc(att, rel, inputLevel, curve: \lin).kr;
+    env3 = Env.perc(att, rel * 1.5, inputLevel, curve: \lin).kr;
+    env4 = Env.perc(att, rel * 1.5, inputLevel, curve: \lin).kr;
+
+    osc4 = SinOsc.ar(freq) * 6.7341546494171 * modIndex * env4;
+    osc3 = SinOsc.ar(freq * 2, osc4) * env3;
+    osc2 = SinOsc.ar(freq * 30) * 0.683729941 * env2;
+    osc1 = SinOsc.ar(freq * 2, osc2) * env1;
+    snd = Mix((osc3 * (1 - mix)) + (osc1 * mix));
+  	snd = snd * (SinOsc.ar(lfoSpeed).range((1 - lfoDepth), 1));
+
+    snd = snd * Env.asr(0, 1, 0.1).kr(gate: gate, doneAction: 2);
+    snd = Pan2.ar(snd, pan, amp);
+
+    Out.ar(out, snd);
+},
+metadata: (
+	credit: "Nathan Ho",
+	category: \keyboards,
+	tags: [\pitched, \piano, \fm]
+)
+).add;
 )
 
 // lets make new sequencer
