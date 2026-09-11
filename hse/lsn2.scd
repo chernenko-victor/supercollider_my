@@ -166,7 +166,7 @@ Pbindef(\hihat1,
 
 
 ===================================================
-Вложенные паттерны I
+                Вложенные паттерны I
 ===================================================
 
 (
@@ -195,7 +195,7 @@ Pseq(
 )
 
 ===================================================
-Модуляция параметров
+              Модуляция параметров
 ===================================================
 
 
@@ -235,7 +235,7 @@ Pbindef(
 Pbindef(\kick808_4onthefloor).stop;
 
 ===================================================
-MIDI out
+              MIDI out
 ===================================================
 
 Подключаем синт по миди
@@ -315,7 +315,7 @@ Pbindef(\tr_ba_cc_growl).stop;
 
 
 ===================================================
-Типы данных. Массивы, списки
+            Типы данных. Массивы, списки
 ===================================================
 
 s.plotTree
@@ -341,6 +341,53 @@ s.plotTree
 ~midi_pitch3_arr.class;
 
 
+~midi_pitch1_arr3 = Array.newClear(10);
+
+(
+~midi_pitch1_arr3.do({
+	arg ...args;
+	// value, index
+	// args.postln;
+	~midi_pitch1_arr3[args[1]] = args[1] * 2 + rrand(0, 3)
+});
+)
+
+~dur_arr = Array.rand(5, 1, 6) * 0.25;
+~dur_arr = ~dur_arr ++ ([Rest(1), Rest(2), Rest(4)] * 0.25)
+
+~dur_arr_nonclassic = ~dur_arr.scramble;
+(
+~dur_arr_nonclassic.do({
+	arg ...args;
+	~dur_arr_nonclassic[args[1]] = args[0] * (1 + (args[0] * 0.05))
+});
+)
+
+
+Функция как объект с входами и выходами
+(
+~get_rnd_dur = {
+	arg dur_arr;// this is input
+	var result = -1; // default value for variable
+	dur_arr.size.postln;
+	result = dur_arr.choose; // get random value from array
+	result; // last string is output, for multuple output use array
+};
+)
+
+~get_rnd_dur.(~dur_arr_nonclassic);
+
+
+
+.clipAt(index)
+.wrapAt(index)
+.foldAt(index)
+rotate(n: 1)
+
+
+.reshape( ... shape)
+
+.windex //Interprets the array as a list of probabilities which should sum to 1.0 and returns a random index value based on those probabilities.
 
 //////////////////////////////////////////
 //
@@ -448,3 +495,144 @@ Pdefn(\ptrn3_pl_degree, 0);
 )
 
 Pdef(\ptrn3_pl).stop;
+
+
+======================================================
+         функция как синтезатор
+=======================================================
+
+окно показывает активные экземпляры синтов
+s.plotTree;
+
+(
+{
+	arg freq = 440;
+	(
+		SinOsc.ar(freq)
+		+ (SinOsc.ar(freq * 2) / 2)
+		+ (SinOsc.ar(freq * 3) / 3)
+		+ (SinOsc.ar(freq * 4) / 4)
+		+ (SinOsc.ar(freq * 5) / 5)
+	) / 5;
+}.play;
+)
+
+Нет названия, чтобы использовать в паттерне
+
+
+
+// define synths
+(
+{
+	arg freq = 440;
+	(
+		SinOsc.ar(freq)
+		+ (SinOsc.ar(freq * 2) / 2)
+		+ (SinOsc.ar(freq * 3) / 3)
+		+ (SinOsc.ar(freq * 4) / 4)
+		+ (SinOsc.ar(freq * 5) / 5)
+	) / 5;
+}.asSynthDef(fadeTime: 0.1, name: \test_synth).add;
+)
+
+~test_synth_exempl1 = Synth(\test_synth, args: [\freq, 110 + (10.rand * 200)]);
+~test_synth_exempl1.release();
+
+
+Теперь можно использовать в паттерне
+
+Pbindef(\seq3).clear;
+
+(
+Pbindef(
+	\seq3,
+	    \instrument, \test_synth,
+		\freq, Pser([1, {rrand(2, 5)}, 4] * 220, inf),
+		\dur, (
+			Pser([1, 2, Rest(3), 4, Rest(2)], inf) *
+			Pser((0.01, 0.012..1.4)**4, inf)
+		).trace,
+).play;
+)
+
+
+======================================================
+                  Типы движения
+=======================================================
+
+1. Монотонное в одну сторону. Когда доходит до конца, начинается снова
+
+1a С переменным шагом
+Pwalk((1..12), stepPattern: Pser([1, 2], inf), directionPattern: 1).asStream.nextN(17)
+
+2. Возвратное.  Когда доходит до конца, идет в обратную сторону
+
+(1, 3..17)++(16, 14..1)
+
+Pwalk((1..12), stepPattern: Pseq([1, 2], inf), directionPattern: Pseq([-1, 1], inf)).asStream.nextN(28)
+
+
+
+Pbindef(\seq3).clear;
+
+(
+Pbindef(
+	\seq3,
+	    \instrument, \test_synth,
+	    \freq, (
+		Pwalk(
+			(1..12),
+			stepPattern: Pseq([1, 2], inf),
+			directionPattern: Pseq([-1, 1], inf)
+		)
+		+ 48).midicps,
+		\dur, (
+			Pser([1, 2, Rest(3), 4, Rest(2)], inf) *
+			Pser((0.01, 0.012..1.4)**4, inf)
+		).trace,
+).play;
+)
+
+
+3. Хаотичное
+
+Pwalk((1..12), stepPattern: Prand([-2, -1, 0, 1, 2], inf), directionPattern: Prand([-1, 1], inf)).asStream.nextN(17)
+
+
+Pbindef(\seq3).clear;
+
+(
+Pbindef(
+	\seq3,
+	    \instrument, \test_synth,
+	    \freq, (
+		Pwalk(
+			(1..12),
+			stepPattern: Pseq([1, 2], inf),
+			directionPattern: Pseq([-1, 1], inf)
+		)
+		+ 48).midicps,
+		\dur, Pwalk(
+		  (1..12),
+		  stepPattern: Prand([-2, -1, 0, 1, 2], inf),
+		  directionPattern: Prand([-1, 1], inf)
+	) * 0.05
+,
+).play;
+)
+
+
+=================================
+
+(
+Pbindef(\tr_ba_midi,
+    \type, \midi,         // Говорим паттерну отправлять MIDI, а не генерировать аудио
+    \midiout, m,          // Передаем наш MIDI-выход
+    \chan, 0,             // MIDI-канал (0 = 1-й канал)
+    \midinote, Pseq([60, 62, 64, 67], inf), // Ноты в формате MIDI (60 = До первой октавы)
+    \dur, 0.25,
+    \amp, 0.6             // Громкость, которая автоматически пересчитается в Velocity (0-127)
+).play;
+)
+
+Pbindef(\tr_ba_midi).stop;
