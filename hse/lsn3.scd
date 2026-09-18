@@ -115,6 +115,16 @@ Pdef(
 )
 
 
+// Как смотреть результат работы паттернов (иногда не работает, но в 95% работает)
+//
+// .asStream - covert pattern to stream
+// .nextN(100) - covert stream to array with 100 elements
+// .plot - show array with indexies on horizontal axis and elements' values on vertical
+
+Prand([0, 2, 4, 6, 8], inf).asStream.nextN(1000).histo.plot; // Histogram  shows the number of occurrences of each element in array [0, 2, 4, 6, 8]. Compare with:
+
+
+
 Последовательно из нескольких источников
 Place(#[1, [2,5], [3, 6]], inf).asStream.nextN(10);
 
@@ -653,6 +663,20 @@ s.plotTree;
 SynthDescLib.global.browse;
 
 
+// =============================================================
+// CAUSION: Always limit amplitude before listening sounds!
+// =============================================================
+
+(
+{
+	arg freq, amp; // two inputs
+	Limiter.ar( // just for safety: limit loud sounds to -0.4 dB
+		SinOsc.ar(freq) * amp, // audio signal
+		level: dbamp(-0.4)
+	);
+}.asSynthDef(fadeTime: 0.1, name: \sin_synth_proto).add;
+)
+
 Как можно конструировать звук. Аддитивный.
 ...
 
@@ -707,6 +731,25 @@ q.value;
 });
 )
 
+(
+~metro_part2 = TempoClock.new(2); // metronome for "drum2_part" to 2 beat per second (PBS)
+
+~metro_form.sched(30, {
+	"Start B".postln;
+	// after 30 beats from begin
+
+	// start part2
+	~drum2_part = Pbind(
+		\instrument, \oneclap_thor,
+	).play(~metro_part2);
+});
+
+~metro_form.sched(90, {
+	~metro_form.stop;
+	~drum2_part.stop;
+	"End of piece".postln;
+});
+)
 ===================================================
           Различные случайные распределения
 ===================================================
@@ -752,6 +795,23 @@ Plprand(0, 7, inf).asStream.nextN(1000).histo.plot;
 
 
 Phprand(0, 7, inf).asStream.nextN(1000).histo.plot;
+
+
+// use it for contrast between of parts of musical form
+//
+// part A
+(
+Pbind(
+	\degree, Phprand(1, 10, inf).trace,
+).play;
+)
+
+// part B
+(
+Pbind(
+	\degree, Plprand(1, 10, inf).trace,
+).play;
+)
 
 
 // gaussian (normal) distribution
@@ -804,7 +864,7 @@ Pseg(Pseq([1, 5], inf), Pseq([4, 1], inf), \linear).asStream.nextN(10).plot("Pat
 
 
 ================================================
-Повторение
+              Повторение
 ================================================
 
 (
@@ -863,67 +923,3 @@ y.postln;
 -> [ 1, 6, foo, 2, 6, bar, 3, 6, foo, 1, 6, bar ]
 
 (1 .. 20).clump(4).lace(20).clump(4)
-
-
-==============================================
-Огибающие
-==============================================
-
-
-
-
-
-================================================
-дополнения
-================================================
-
-(
-{
-	"test fork".postln;
-	3.wait;
-
-	rrand(1, 11).postln;
-	Pdef(\test_ptrn_pl,
-		Pbind(
-			\degree, Prand(
-				// [1, 3, 6, 8] + Prand([0, 1, 4], 1),
-				//([0, 0, 0, 0] + {rrand(1, 7)}),
-				(1 .. 20).clump(4),
-				inf
-			)
-		).trace
-	).play;
-	10.wait;
-
-	"end function fork".postln;
-	Pdef(\test_ptrn_pl).stop;
-}.fork;
-)
-
-================================
-
-
-нельзя использовать индекс, который больше или равен размера массива
-чтобы не проверять, можно вместо [] использовать методы:
-.clipAt(index)
-.wrapAt(index)
-.foldAt(index)
-
-
-rotate(n: 1) // перестановка элементов в массиве
-
-.reshape( ... shape) //
-
-.windex //Interprets the array as a list of probabilities which should sum to 1.0 and returns a random index value based on those probabilities.
-
-
-
-==============================================
-итеграция в VS code
-==============================================
-/*
-vscode-supercollider (originally developed by scztt and maintained via community contributors). It uses the Language Server Protocol (LSP) to communicate directly with SuperCollider (sclang).
-
-
-FluCoMa Gerard Roma
-*/
