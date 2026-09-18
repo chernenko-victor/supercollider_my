@@ -28,10 +28,29 @@ Pbind().play;
 // управление частотой и ритмом
 (
 Pbind(
-	\freq, 440,
-	\dur, 0.25,
+	\freq, 880,
+	\dur, 1.5,
+	\amp, 0.1
 ).play;
 )
+
+(
+~part1 = Pbind(
+	\freq, 880,
+	\dur, 1.5,
+	\amp, 0.5,
+).play;
+)
+
+(
+~part2 = Pbind(
+	\freq, 440,
+	\dur, 0.5,
+).play;
+)
+
+~part1.stop;
+~part2.stop;
 
 // меняем значения и запускаем: с каждым запуском добавляется
 // новая партия
@@ -239,6 +258,7 @@ SynthDef(\FMRhodes2, {
     Out.ar(out, snd);
 }).add;
 )
+
 
 // lets make new sequencer
 

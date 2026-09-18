@@ -1,5 +1,6 @@
 ///////////////////////////////////////
 // livecoding style
+// изменение параметров без рестарта
 //
 // change freq and duration, evaluate region
 // to stop change "play" to "stop" and evaluate region
@@ -7,6 +8,16 @@
 ==================================================
      изменение индивидуальных параметров паттерна
 ===================================================
+
+(
+Pbindef(
+	\seq2,
+
+	\freq, Pser([1, {rrand(2, 6)}, 4] * 220, inf).trace,
+		\dur, Pser([1] * 0.25, inf),
+
+).play;
+)
 
 (
 Pbindef(
@@ -64,18 +75,31 @@ Array.geom(5, 1, 3).plot("Geometric progression");
 Array.geom(5, 20, 1/3).plot("Geometric regression");
 
 
+арифметическая прогрессия с 32 до 80 с шагом 1 записывается в массив
+(32..80)
+
+
+арифметическая прогрессия с 35 до 22 с шагом 2 записывается в массив
+(35, 33..22)
+
+
+График генератора синусоидальной звуковой волны
 { SinOsc.ar(440) }.plot(0.01, bounds: Window.screenBounds);
 
 
+Серия из 10 случайных чисел, график точками
 Pser({rrand(-3, 7)}.dup(10), inf).asStream.nextN(10).plot("Pattern from random", discrete: true);
+
+asStream "запускает" работу паттерна
+nextN(10) выводит в массив первые 10 значений
 
 Pser({rrand(-3, 7)}.dup(10), inf).asStream.nextN(10).plot("Pattern from random");
 
-
 ===================================================
+      модификация последовательности (секвенции)
+===================================================
+
 Сделаем плавное изменение dur
-===================================================
-
 (
 Pbindef(
 	\seq3,
@@ -83,23 +107,35 @@ Pbindef(
 		\freq, Pser([1, {rrand(2, 5)}, 4] * 220, inf),
 		\dur, (
 			Pser([1, 2, Rest(3), 4, Rest(2)], inf) *
-			Pser((0.01, 0.012..1.4)**4, inf)
+			Pser((0.1, 0.105..0.65)**4, inf)
 		).trace,
-).stop;
+).play;
 )
 
-Как сделать аккорды?
 
+Такой прием называется "модуляция"
+
+Pser([1, 2, Rest(3), 4, Rest(2)], inf).asStream.nextN(10).plot("Rythm pattern", discrete: true);
+
+Pser((0.1, 0.105..0.65)**4, inf).asStream.nextN(50).plot("Rythm pattern", discrete: true);
+
+(
+(Pser([1, 2, Rest(3), 4, Rest(2)], inf) *
+			Pser((0.1, 0.105..0.65)**4, inf)).asStream.nextN(70).plot("Rythm pattern", discrete: true);
+)
+
+
+Как сделать аккорды?
 (
 Pbindef(
 	\seq5_acc,
 		\freq, Ptuple([
 			Pseq([60, 62, 64].midicps, inf),
 			Pwhite(67, 72, inf).midicps,
-			Pseq([Pseries(40, 2, 15)], inf).midicps.trace,
-		]),
+			Pseq([Pseries(40, 2, 15)], inf).midicps,
+		]).trace,
 		\dur, 1,
-).stop;
+).play;
 )
 
 
@@ -114,7 +150,7 @@ Pbindef(
 )
 
 ===================================================
-Как тестировать синты
+                 Как тестировать синты
 ===================================================
 
 SCLOrkSynths.gui;
@@ -169,19 +205,23 @@ Pbindef(\hihat1,
                 Вложенные паттерны I
 ===================================================
 
-(
-Pseq([
-		1, 1, 1, 1,
-		Prand([1, 1, Pn(0.5, 2)], 4)
-], inf).asStream.nextN(20)
-)
-
-
+разннобразие внутри секвенции
 (
 Pseq(
 	[1, 2, 3, Prand([4, 5, 10, 20], 1)],
 	4
 ).asStream.nextN(20)
+)
+
+
+повторение значения N раз
+Pn(0.5, 2).asStream.nextN(2)
+
+(
+Pseq([
+		1, 1, 1, 1,
+		Prand([Pn(1, 3), Pn(0.5, 2)], 4)
+], inf).asStream.nextN(20)
 )
 
 !!!
@@ -194,10 +234,14 @@ Pseq(
 ).asStream.nextN(20)
 )
 
+чем больше раз повторяется элемент в Prand, тем чаще он появляется в результате
+Но остальные элементы тоже появляются, просто реже.
+
 ===================================================
               Модуляция параметров
 ===================================================
 
+скопируем паттерн из kick808 из библиотеки SCLOrkSynths и заменим ограниченное время исполнения на inf
 
 (
 Pbindef(\kick808_4onthefloor,
@@ -205,10 +249,11 @@ Pbindef(\kick808_4onthefloor,
 	\dur, Prand([1, 1, 1, 1, 0.5, Rest(1), Rest(0.5)], inf) * 0.4,
 	\amp, 0.1,
 	\rel, 0.7,
-	\dist, Pser((0.1, 0.2..1), inf) // здесть бесконечную серю заменили на ограниченную
+	\dist, Pser((0.1, 0.2..1), inf) // здесь бесконечную серю заменили на ограниченную
 ).play;
 )
 
+панорамирование
 (
 Pbindef(
 	\kick808_4onthefloor, \pan, Pser((-0.5, -0.25..0.5), inf)
@@ -216,6 +261,7 @@ Pbindef(
 )
 
 
+основной тон
 (
 Pbindef(
 	\kick808_4onthefloor, \freq1, Pser((240, 250..440), inf)
@@ -248,8 +294,8 @@ MIDIClient.init;
 Смотрим порядковый номер устройства MIDI (нумерация начинается с 0).
 
 m = MIDIOut(1);  // Linux users: MIDIOut(0, MIDIClient.destinations[0].uid)
-m.noteOn(0, 60, 60);
-m.noteOff(0, 60, 60);
+m.noteOn(0, 63, 60);
+m.noteOff(0, 63, 60);
 
 
 (
@@ -273,6 +319,14 @@ Pbindef(\tr_ba_midi,
 ).play;
 )
 
+(
+Pbindef(\tr_ba_midi,
+	\dur, Pser([1, 2, Rest(3), 4, Rest(2)], inf) *
+			Pser((0.01, 0.012..1.4)**4, inf)
+);
+)
+
+
 Pbindef(\tr_ba_midi).stop;
 
 (
@@ -284,7 +338,7 @@ Pbindef(\tr_ba_cc,
     \midicmd, \control,   // Главное изменение: переключаемся в режим CC!
     \ctlNum, 1,           // Номер контроллера (например, 1 — колесо модуляции, 74 — яркость/cutoff)
 
-    // Значение CC (должно быть строго целым числом в диапазоне от 0 до 127)
+    // Значение CC (должно быть целым числом в диапазоне от 0 до 127)
     // Используем Pseg, чтобы плавно крутить ручку вверх и вниз
 	\control, Pser((32..80), inf).asInteger.trace,          // Обязательно округляем до целых чисел
 
@@ -303,7 +357,7 @@ Pbindef(\tr_ba_cc_growl,
     \midicmd, \control,   // Главное изменение: переключаемся в режим CC!
     \ctlNum, 12,           // Номер контроллера (например, 1 — колесо модуляции, 74 — яркость/cutoff)
 
-    // Значение CC (должно быть строго целым числом в диапазоне от 0 до 127)
+    // Значение CC (должно быть целым числом в диапазоне от 0 до 127)
     // Используем Pseg, чтобы плавно крутить ручку вверх и вниз
 	\control, Pser((32..80), inf).asInteger.trace,          // Обязательно округляем до целых чисел
 
@@ -318,16 +372,12 @@ Pbindef(\tr_ba_cc_growl).stop;
             Типы данных. Массивы, списки
 ===================================================
 
-s.plotTree
+~midi_pitch1_arr = Array.newClear(10); // создаем пустой массив длиной 10
+~midi_pitch1_arr.postln; // вывод массива в консоль
+~midi_pitch1_arr[0].postln; // значение по умолчанию
+~midi_pitch1_arr[0] = 64; // присвоение значение первому элементу
 
-~midi_pitch1_arr = Array.newClear(10);
-~midi_pitch1_arr;
-~midi_pitch1_arr[0];
-~midi_pitch1_arr[0] = 64;
-
-// ~midi_pitch1_arr
-
-1.class;
+1.class; // отобразить тип данных
 ~midi_pitch2_arr = [];
 ~midi_pitch2_arr.class;
 // ~x.isKindOf(Float);
@@ -340,22 +390,31 @@ s.plotTree
 ~midi_pitch3_arr = List[1, 4, 6];
 ~midi_pitch3_arr.class;
 
-
+В список можно добавлять новые эл-ы, в массив нельзя, он фиксированной длины
 ~midi_pitch1_arr3 = Array.newClear(10);
+
+
+.do(<функция>) применяет функцию к каждому элементу массива
 
 (
 ~midi_pitch1_arr3.do({
-	arg ...args;
-	// value, index
+	arg ...args; // все входные параметры сохраняются в массив args
+	// args[0] - значение, args[1] - индекс элемента
 	// args.postln;
-	~midi_pitch1_arr3[args[1]] = args[1] * 2 + rrand(0, 3)
+	~midi_pitch1_arr3[args[1]] = args[1] * 2 + rrand(0, 3) // изменим каждый элемент
 });
 )
 
+// массивы можно складывать и умножать на число
 ~dur_arr = Array.rand(5, 1, 6) * 0.25;
+
+// объединение 2-х массивов в один
 ~dur_arr = ~dur_arr ++ ([Rest(1), Rest(2), Rest(4)] * 0.25)
 
+
 ~dur_arr_nonclassic = ~dur_arr.scramble;
+
+// неклассическая модификация ритмики
 (
 ~dur_arr_nonclassic.do({
 	arg ...args;
@@ -375,25 +434,14 @@ s.plotTree
 };
 )
 
-~get_rnd_dur.(~dur_arr_nonclassic);
-
-
-
-.clipAt(index)
-.wrapAt(index)
-.foldAt(index)
-rotate(n: 1)
-
-
-.reshape( ... shape)
-
-.windex //Interprets the array as a list of probabilities which should sum to 1.0 and returns a random index value based on those probabilities.
+~get_rnd_dur.(~dur_arr_nonclassic); // вызов функции
 
 //////////////////////////////////////////
 //
 // Different disributions patterns
 //
 // The histogram shows how often the values ​​appear
+// Разная частотность появления случайных элементов
 
 Pwhite(0, 7, inf).asStream.nextN(1000).histo.plot; // random equal discrete distribution
 
@@ -404,13 +452,14 @@ Prand([1, 2, 4, 8], inf).asStream.nextN(1000).histo.plot; // random equal discre
 
 
 =========================================
-      таймер, квантизация
+         таймер, квантизация
 ========================================
 
 ~cklk1 = TempoClock.new(1); // beats per seconds
+
 ~cklk1.beats;
 
-~cklk1.tempo = 0.77;
+~cklk1.tempo = 1;
 
 (
 Pbindef(
@@ -466,9 +515,10 @@ t.schedAbs(t.nextBar, { t.beatsPerBar_(3) });  // OK
 
 
 ======================================================
-    Изменение всего паттерна в реал-тайме
+           Изменение параметра паттерна Pdef
 =======================================================
 
+Pdef тоже можно использовать для изменения в реал-тайме отдельных параметров
 (
 Pdef(
 	\seq1_lc,
@@ -555,84 +605,17 @@ Pbindef(
 ).play;
 )
 
+Задание для самостоятельной работы
+1. Подключите виртуальный или железный синтезатор, который управляется по MIDI.
+2. В дополнение к партиям прежнего задания сделайте партию для внешнего синтезатора, меняйте ее с помощью Pbundef. Запишите синтезатор, сведите его с ранее записанными партиями внутренних синтов SuperCollider.
 
-======================================================
-                  Типы движения
-=======================================================
+Виртуальный MIDI кабель для Windows: loopMidi https://www.tobias-erichsen.de/software/loopmidi.html
+Для Mac: IAC-драйвер, есть в системе по умолчанию, устанавливать не надо.
+Настройка: 1.	Откройте на Mac приложение «Настройка Audio-MIDI» (Audio MIDI Setup).
+2. В верхнем меню нажмите Окно -> Показать MIDI-студию (или нажмите Cmd + 2).
+3. В появившемся окне найдите иконку красного цвета с надписью Драйвер IAC (IAC Driver) и кликните по ней дважды.
+4. В открывшихся свойствах обязательно поставьте галочку «Устройство подключено» (Device is online).
+5. Ниже в блоке «Порты» по умолчанию уже будет создан один порт (обычно Bus 1)
+6. Нажмите Применить (Apply).
 
-1. Монотонное в одну сторону. Когда доходит до конца, начинается снова
-
-1a С переменным шагом
-Pwalk((1..12), stepPattern: Pser([1, 2], inf), directionPattern: 1).asStream.nextN(17)
-
-2. Возвратное.  Когда доходит до конца, идет в обратную сторону
-
-(1, 3..17)++(16, 14..1)
-
-Pwalk((1..12), stepPattern: Pseq([1, 2], inf), directionPattern: Pseq([-1, 1], inf)).asStream.nextN(28)
-
-
-
-Pbindef(\seq3).clear;
-
-(
-Pbindef(
-	\seq3,
-	    \instrument, \test_synth,
-	    \freq, (
-		Pwalk(
-			(1..12),
-			stepPattern: Pseq([1, 2], inf),
-			directionPattern: Pseq([-1, 1], inf)
-		)
-		+ 48).midicps,
-		\dur, (
-			Pser([1, 2, Rest(3), 4, Rest(2)], inf) *
-			Pser((0.01, 0.012..1.4)**4, inf)
-		).trace,
-).play;
-)
-
-
-3. Хаотичное
-
-Pwalk((1..12), stepPattern: Prand([-2, -1, 0, 1, 2], inf), directionPattern: Prand([-1, 1], inf)).asStream.nextN(17)
-
-
-Pbindef(\seq3).clear;
-
-(
-Pbindef(
-	\seq3,
-	    \instrument, \test_synth,
-	    \freq, (
-		Pwalk(
-			(1..12),
-			stepPattern: Pseq([1, 2], inf),
-			directionPattern: Pseq([-1, 1], inf)
-		)
-		+ 48).midicps,
-		\dur, Pwalk(
-		  (1..12),
-		  stepPattern: Prand([-2, -1, 0, 1, 2], inf),
-		  directionPattern: Prand([-1, 1], inf)
-	) * 0.05
-,
-).play;
-)
-
-
-=================================
-
-(
-Pbindef(\tr_ba_midi,
-    \type, \midi,         // Говорим паттерну отправлять MIDI, а не генерировать аудио
-    \midiout, m,          // Передаем наш MIDI-выход
-    \chan, 0,             // MIDI-канал (0 = 1-й канал)
-    \midinote, Pseq([60, 62, 64, 67], inf), // Ноты в формате MIDI (60 = До первой октавы)
-    \dur, 0.25,
-    \amp, 0.6             // Громкость, которая автоматически пересчитается в Velocity (0-127)
-).play;
-)
-
-Pbindef(\tr_ba_midi).stop;
+https://drive.google.com/file/d/1UiAw8ub-4__yRIHRc1eUYwBciLQpIwGJ/view?usp=sharing
