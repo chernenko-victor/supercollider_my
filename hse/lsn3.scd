@@ -1,26 +1,34 @@
-SCLOrkSynths.gui;
+SCLOrkSynths.gui; // загружаем библиотеку
 
+// Паттерны
+// https://doc.sccode.org/Tutorials/A-Practical-Guide/PG_02_Basic_Vocabulary.html
 
 ===================================================
            Вложенные паттерны II
 ===================================================
 
-Pbindef(\seq3).clear;
-
 ~clck3 = TempoClock.new(120/60);
+
 
 (
 Pbindef(
 	\seq3,
 	\instrument, "kick808",
-	\dur, Pseq([1, 1, 1, Rest(1)], inf),
+	\dur, Pseq([1, 1, 1,
+		Prand([1, Rest(1/2), 2, Rest(1/4)], 1)
+	], inf).trace,
 	\amp, 0.4,
 	\rel, 0.7,
 	\dist, 0.5,
 ).clock_(~clck3).play;
 )
 
+// вывод первых 10 значений паттерная в консоль
+Prand([1, Rest(1/2), 2, Rest(1/4)], inf).asStream.nextN(10);
+
 Pbindef(\seq3).stop;
+
+Pbindef(\seq3).clear; // обнуляет предыдущие изменения
 
 (
 Pbindef(
@@ -71,9 +79,13 @@ Pbindef(
 Pdef(\movements4_ptrn_pl,
 	Pxrand(
 		[
-			Pbind(\degree, Pseq([0, 2, 4, 6], 3)),
+			Pbind(
+				\instrument, \distortedGuitar,
+				\degree, Pseq([0, 2, 4, 6], 3)),
+			    \dur, Pseq([Pn(1/8, 3), 1/2, 1/8, 1/8, Rest(1/8), 1/8, Rest(1/8), 1/8, Rest(1/8), 1/8, 3/8, 3/8, 3/8, 1/2]),
 			Pbind(\degree, Prand([0, 0.1, 1, 1.1] + 2, 5)),
 			Pbind(
+				\instrument, \FMRhodes1,
 				\degree, Pseries({rrand(0, 7) - 8}, 1, {rrand(5, 15)}),
 				\dur, Pxrand((1 .. 5) * 0.25, inf)
 			),
@@ -81,6 +93,9 @@ Pdef(\movements4_ptrn_pl,
 	);
 ).stop;
 )
+
+
+Pseq([Pn(1/8, 3), 1/2, 1/8, 1/8, Rest(1/8), 1/8, Rest(1/8), 1/8, Rest(1/8), 1/8, 3/8, 3/8, 3/8, 1/2]).asStream.nextN(10)
 
 /////////////////////////
 //
@@ -108,7 +123,10 @@ Pdef(
 					Pwhite(6, 15, 1),
 					Pwhite(-3, 5, 1)
 				], 6) // аакорды
-			], 1), 2, 4, 6], inf
+			], 1),
+			2,
+			4,
+			6], inf
 		).trace;
 	),
 ).stop;
@@ -240,7 +258,7 @@ Pbindef(\prophet5pwmStrings,
 Сравним:
 Pn(Pseries(0.0, 0.025, 7), inf).asStream.nextN(10)
 и
-Pseries(0.0, 0.025, inf).asStream.nextN(10)
+Pseries(0.0, 0.025, inf).asStream.nextN(10).plot;
 
 
 1a С переменным шагом
@@ -269,8 +287,12 @@ Pwalk((2..13), stepPattern: Pser([1, 2], inf), directionPattern: 1).asStream.nex
 2. Возвратное.  Когда доходит до конца, идет в обратную сторону. Такое поведение характерно для периодической функции
 
 (1, 3..17)++(16, 14..1)
+Pseq((1, 3..17)++(16, 14..1), inf).asStream.nextN(30).plot;
 
-Pwalk((1..12), stepPattern: Pseq([1, 2], inf), directionPattern: Pseq([-1, 1], inf)).asStream.nextN(28)
+Pwalk((1..12), stepPattern: Pseq([1, 2], inf), directionPattern: Pseq([-1, 1], inf)).asStream.nextN(28).plot
+
+
+Pwalk((1..12), stepPattern: Pseq([1, 2], inf), directionPattern: Pseq([-1, 1], inf)).asStream.nextN(28).plot;
 
 
 Очень симметричное движение быстро утомляет, так что хорошо делать ускорение или замедление каких-то параметров, напр., темпа. Будет "двойное впечатление": повторение и развитие.
@@ -370,10 +392,31 @@ Pseries(start, step, length) работает в точности как ари�
 
 В чистом виде «Pquad» паттерна нет, но квадратичный рост легко получить, если взять обычную арифметическую линию (Pseries) и возвести ее в квадрат через .pow(2) или просто ** 2.
 
+
+(
+~sin_my = {
+	arg in;
+	sin(2 * in) / 10;
+}
+)
+
+
+
 (
 ~plot_2_graph.(
 	Pseries(1, 3, inf).asStream.nextN(10),
 	Pseries(1, 0.7, inf).pow(2).asStream.nextN(10)
+);
+)
+
+Pseries(1, 0.7, inf).asStream.nextN(10).plot
+
+~sin_my.(Pseries(1, 0.01, inf).asStream.nextN(1000)).plot;
+
+(
+~plot_2_graph.(
+	Pseries(1, 3, inf).asStream.nextN(10),
+	~sin_my.(Pseries(1, 0.7, inf).asStream.nextN(10))
 );
 )
 
@@ -522,6 +565,23 @@ L_p = 20 * log10 (p / p_0)
 •	+10 дБ — субъективно воспринимается человеком как увеличение громкости ровно в 2 раза. Физически для этого требуется увеличить мощность усилителя примерно в 10 раз!
 
 
+~limit = 10;
+
+(
+Pbind(
+	\freq, Pfunc({
+		~limit = rrand(1, 10);
+	}).trace,
+).play;
+)
+
+(
+Pbind(
+	\freq, Pfunc({
+		rrand(1, ~limit) * 220;
+	}).trace,
+).play;
+)
 
 
 !!!
@@ -601,6 +661,20 @@ Pbindef(\freq_seq_decreas,
 wolfram mathematica online plot https://www.wolframalpha.com/examples/mathematics/plotting-and-graphics
 
 
+Масштабирование
+Pbindef(\scale_seq).clear;
+(
+Pbindef(\scale_seq,
+	\freq, Pser([1, 2, 3, 4], inf).linlin(1, 4, 440, 880).trace,
+).play;
+)
+
+/*
+.linlin(inMin, inMax, outMin, outMax, clip: 'minmax')
+.linexp(inMin, inMax, outMin, outMax, clip: 'minmax')
+.explin(inMin, inMax, outMin, outMax, clip: 'minmax')
+.expexp(inMin, inMax, outMin, outMax, clip: 'minmax')
+*/
 
 ===================================================
           Синтез звука
@@ -750,6 +824,33 @@ q.value;
 	"End of piece".postln;
 });
 )
+
+
+Этот пример проигрывает ноты ровно 4 бита, а затем останавливается, даже если последовательность нот могла бы продолжаться дальше.
+(
+Pfindur(4,
+    Pbind(
+        \dur, Pseq([0.5, 0.25, 0.25], inf),
+        \midinote, Pseq([60, 62, 65, 67], inf)
+    )
+).play;
+)
+
+
+(
+// Паттерн играет случайное количество нот длительностью 0.3 бита.
+// 0.3 не делится ровно на 1 или 4.
+Psync(
+    Pbind(
+        \dur, 0.3,
+        \note, Pseq([0, 2, 4, 7], 3) // Всего 12 нот по 0.3 = 3.6 бита
+    ),
+    quant: 1.0, // Округлить общую длительность до целого бита
+    maxdur: 4.0 // Но не дольше 4 битов
+).play;
+)
+
+
 ===================================================
           Различные случайные распределения
 ===================================================
