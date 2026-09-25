@@ -1,96 +1,83 @@
-s.boot;
-
-~clck1 = TempoClock.new(60/60);
+SCLOrkSynths.gui; // загружаем библиотеку
 
 
+===================================================
+          Синтез звука
+===================================================
+
+{SinOsc.ar()}.play;
+
+Какие недостатки у такого синтезатора?
+
+...
+
+Быстрый конструктор синта
 (
-Pbindef(\kick808_my,
-	// \instrument, "kick808",
-	\instrument, "distortedGuitar",
-	\freq, [135, 149],
-	\dur, Pseq([
-		3/4, 1/4,
-		1/2, 1/2,
-		Rest(1/2), 1/2,
-		Rest(1/4), 3/4
-	], inf),
-	\amp, 0.2,
-	/*
-	\rel, 0.7,
-	\dist, Pseries(0.1, 0.1, 16),
-	*/
-	\pickPos, Pwhite(0.2, 0.8),
-	\muteSus, Pseq([
-		    0.15, 0.15, 0.15, 0.15, 0.25, 0, 0.15, 0.15,
-		    0.15, 0.3, 0, 0.15, 0.2, 0, 0.15, 0.15], inf),
-).clock_(~clck1).quant_(1);
+{
+	SinOsc.ar();
+}.asSynthDef(fadeTime: 0.1, name: \my_first_synth__proto).add;
 )
 
 
-Pbindef(\kick808_my).play;
-Pbindef(\kick808_my).clear;
-Pbindef(\kick808_my).stop;
+(
+Pbindef(\freq_seq_decreas, \instrument, \my_first_synth__proto);
+)
 
 
-// ~clck1.tempo_(88/60);
-~clck1.tempo_(120/60);
-
-
+Рандом в синтах
+Rand  It generates this when the SynthDef first starts playing, and remains fixed for the duration of the synth's existence.
 
 (
-Pbindef(\kick808_2_my,
-	\instrument, "kick808",
-	\dur, Pseq([
-		4,
-		Rest(2), 2,
-		4,
-		Rest(2), 2,
-	], inf) * 0.4,
-	\amp, 0.8,
-	\rel, 0.7,
-	\dist, Pser((0.1, 0.2..1), inf),
-).clock_(~clck1).quant_(1);
-);
+{
+	SinOsc.ar(Rand(1, 5) * 220);
+}.asSynthDef(fadeTime: 0.1, name: \sin_freq_rnd__proto).add;
+)
 
-Pbindef(\kick808_2_my).play;
-Pbindef(\kick808_2_my).clear;
-Pbindef(\kick808_2_my).stop;
+Pbindef(\freq_seq_decreas, \instrument, \sin_freq_rnd__proto);
 
 
+
+Параметры в паттернах
+...
+
+
+Ручной запуск
+...
+
+~my_first_synth1 = Synth(\my_first_synth__proto);
+
+~my_first_synth1.run(0);
+~my_first_synth1.run(1);
+
+~my_first_synth1.release(0.2);
+
+~my_first_synth1.set(\freq, 330);
+
+
+Отображение экземпляров синта
+s.plotTree;
+
+Отображение проектов (прототипов) синтов
+SynthDescLib.global.browse;
+
+
+// =============================================================
+// CAUSION: Always limit amplitude before listening sounds!
+// =============================================================
 
 (
-Pbindef( \snareOto309_my,
-	// \instrument, "snareOto309",
-	\instrument, "subBass2",
-	\dur, Pseq([2/3, 1/3, 1/3, 1], inf),
-	// \freq, 78,
-	\amp, 0.5,
-	\ctranspose, -20,
-	\blend, Pwhite(0.25, 0.75, inf),
-	\degree, Pseq([
-				-2, -2, -2, -2, 5, -2, -2, -2, 2, 1,
-				0, 0, 0, 0, 4, 0, 5, 0, 6, 0, 7, 7,
-				-2, -2, -2, -2, 5, -2, -2, -2, 2, 1,
-				0, 0, 0, 0, 4, 2, 5, 2, 0, -2], inf),
-	/*
-	\att, Pwhite(0.01, 0.1),
-	\dec, Pwhite(0.01, 0.1),
-	\rel, Pwhite(0.05, 0.25),
-	\curve, Pwhite(-8, -2),
-	\preamp, Pwhite(1.2, 2),
-	\filterHarmonic, Pwhite(1.2, 5),
-	\oscsHarmonic, Pwhite(1.5, 3),
-	\blend, Pwhite(0.333, 0.667),
-	\oscsAmp, Pwhite(0.1, 1),
-	\noiseRatio, Pwhite(0.3, 0.7),
-	\noiseAmp, Pwhite(0.1, 1),
-	*/
-).clock_(~clck1).quant_(1);
-);
+{
+	arg freq, amp; // two inputs
+	Limiter.ar( // just for safety: limit loud sounds to -0.4 dB
+		SinOsc.ar(freq) * amp, // audio signal
+		level: dbamp(-0.4)
+	);
+}.asSynthDef(fadeTime: 0.1, name: \sin_synth_proto).add;
+)
 
-Pbindef(\snareOto309_my).play;
-Pbindef(\snareOto309_my).clear;
-Pbindef(\snareOto309_my).stop;
+Как можно конструировать звук. Аддитивный.
+...
+
 
 
 ======================================================
@@ -114,11 +101,6 @@ Pbindef(\prophet5pwmStrings,
 	\rq, Pn(Pseries(0.9, -0.1, 5), inf)
 ).play;
 );
-
-Сравним:
-Pn(Pseries(0.0, 0.025, 7), inf).asStream.nextN(10)
-и
-Pseries(0.0, 0.025, inf).asStream.nextN(10).plot;
 
 
 1a С переменным шагом
@@ -226,8 +208,7 @@ Pseries(start, step, length) работает в точности как ари�
 )
 
 
-функция совмещения графиков
-
+функция совмещения графиков:
 (
 ~plot_2_graph = {
 	arg data1_arr, data2_arr;
@@ -254,52 +235,46 @@ Pseries(start, step, length) работает в точности как ари�
 
 
 (
-~sin_my = {
-	arg in;
-	sin(2 * in) / 10;
-}
-)
-
-
-
-(
 ~plot_2_graph.(
 	Pseries(1, 3, inf).asStream.nextN(10),
 	Pseries(1, 0.7, inf).pow(2).asStream.nextN(10)
 );
 )
 
-Pseries(1, 0.7, inf).asStream.nextN(10).plot
+// Pseries(1, 0.7, inf).asStream.nextN(10).plot
 
-~sin_my.(Pseries(1, 0.01, inf).asStream.nextN(1000)).plot;
-
-(
-~plot_2_graph.(
-	Pseries(1, 3, inf).asStream.nextN(10),
-	~sin_my.(Pseries(1, 0.7, inf).asStream.nextN(10))
-);
-)
 
 Pbindef(\prophet5pwmStrings).clear;
 
 (
 Pbindef(\prophet5pwmStrings,
 	// \instrument, "prophet5pwmStrings",
-	\freq, Pn(Pseries(21, 1, 10).pow(2), inf).trace,
-	// \note, Pwalk((12..1), stepPattern: Pser([1, 2], inf), directionPattern: 1),
-	// \ctranspose, -12,
+	\freq, Pn(Pseries(440, 20, 10), inf).trace,
 	\amp, 0.1,
-	\dur, Pseq([Pn(0.5, 8), Pn(0.25, 8), Pn(0.125, 16)], 1),
-	\lfowidth, Pn(Pseries(0.0, 0.025, 7), inf),
-	\lforate, Pn(Pseries(2, 1, 11), inf),
-	\rq, Pn(Pseries(0.9, -0.1, 5), inf),
+	\dur, Pseq([Pn(0.5, 8), Pn(0.25, 8), Pn(0.125, 16)], inf),
+	// \lfowidth, Pn(Pseries(0.0, 0.025, 7), inf),
+	// \lforate, Pn(Pseries(2, 1, 11), inf),
+	// \rq, Pn(Pseries(0.9, -0.1, 5), inf),
 ).play;
 );
 
-2.pow(1/12)
-440.pow(1/2)
 
-Pn(Pseries(440, 1, 10), inf).asStream.nextN(20)
+440.pow(1/2)
+(
+Pbindef(\prophet5pwmStrings,
+	\freq, Pn(Pseries(21, 1, 10).pow(2), inf).trace,
+)
+)
+
+(
+Pbindef(\prophet5pwmStrings,
+	\freq, Pn(Pseries(440, 20, 10), inf).trace,
+)
+)
+
+Pbindef(\prophet5pwmStrings).stop;
+
+
 
 Экспоненциальный\(f(x) = 2^x\)  Геометрическая прогрессия Умножается на фиксированное число (*2, *2, *2...) Взрывная (эффект снежного кома)
 
@@ -323,17 +298,12 @@ Pbindef(\prophet5pwmStrings).clear;
 
 (
 Pbindef(\prophet5pwmStrings,
-	// \instrument, "prophet5pwmStrings",
 	\freq, Pn(Pseries(440, 10, 10), inf).trace,
-	// \note, Pwalk((12..1), stepPattern: Pser([1, 2], inf), directionPattern: 1),
-	// \ctranspose, -12,
-	\amp, 0.1,
+    \amp, 0.1,
 	\dur, 0.5,
-	// \lfowidth, Pn(Pseries(0.0, 0.025, 7), inf),
-	// \lforate, Pn(Pseries(2, 1, 11), inf),
-	// \rq, Pn(Pseries(0.9, -0.1, 5), inf),
 ).play;
 );
+
 
 Pgeom(start: 440, grow: 1.022, length: 10).asStream.nextN(10);
 
@@ -350,6 +320,7 @@ Pbindef(\prophet5pwmStrings,
 );
 )
 
+
 // Lets make Angine de Poitrine ))
 (
 Pbindef(\prophet5pwmStrings,
@@ -361,6 +332,7 @@ Pbindef(\prophet5pwmStrings,
 )
 
 
+// попробуем множитель 2.pow(1/12)
 (
 Pbindef(\prophet5pwmStrings,
 	\freq, Pn(
@@ -405,7 +377,7 @@ Pbindef(\amp_seq,
 Pgeom(0.05, 1.18, 18).asStream.nextN(18);
 
 
-Децибел - это логарифм отношения двух величин, т.е. экспоненцияальной функции. Логарифм "приводит" экспоненту к почти линейной зависимости. Можно прибавлять, в не умножать.
+Децибел - это логарифм отношения двух величин, т.е. экспоненцияальной функции. Логарифм "приводит" экспоненту к почти линейной зависимости. Можно прибавлять, а не умножать.
 
 SPL (Sound Pressure Level), уровень звукового давления. Измеряется эта величина в децибелах (дБ) и показывает, насколько громким является звук.
 
@@ -424,24 +396,6 @@ L_p = 20 * log10 (p / p_0)
 •	+6 дБ — сильное увеличение громкости. Физически это означает удвоение звукового давления (Паскалей).
 •	+10 дБ — субъективно воспринимается человеком как увеличение громкости ровно в 2 раза. Физически для этого требуется увеличить мощность усилителя примерно в 10 раз!
 
-
-~limit = 10;
-
-(
-Pbind(
-	\freq, Pfunc({
-		~limit = rrand(1, 10);
-	}).trace,
-).play;
-)
-
-(
-Pbind(
-	\freq, Pfunc({
-		rrand(1, ~limit) * 220;
-	}).trace,
-).play;
-)
 
 
 !!!
@@ -482,7 +436,10 @@ Pbindef(
 ).play;
 )
 
+// временно остановить
 Pbindef(\freq_seq_decreas).pause;
+
+// перезапустить с момента остановки
 Pbindef(\freq_seq_decreas).resume;
 
 
@@ -517,11 +474,57 @@ Pbindef(\freq_seq_decreas,
 ...
 
 
-Построение графиков онлайн
+============================================
+             придумываем свою функцию
+============================================
+(
+~sin_my = {
+	arg in;
+	sin(2 * in) / 10;
+}
+)
+
+~sin_my.(Pseries(1, 0.01, inf).asStream.nextN(1000)).plot;
+
+(
+~plot_2_graph.(
+	Pseries(1, 3, inf).asStream.nextN(10),
+	~sin_my.(Pseries(1, 0.7, inf).asStream.nextN(10))
+);
+)
+
+
+// можно просто функции в паттерне использовать
+~limit = 10;
+
+(
+Pbind(
+	\freq, Pfunc({
+		~limit = rrand(1, 10);
+	}).trace,
+).play;
+)
+
+(
+Pbind(
+	\freq, Pfunc({
+		rrand(1, ~limit) * 220;
+	}).trace,
+).play;
+)
+
+
+=======================================================
+               Построение графиков онлайн
+=======================================================
+
 wolfram mathematica online plot https://www.wolframalpha.com/examples/mathematics/plotting-and-graphics
 
 
-Масштабирование
+======================================================
+                   Масштабирование
+ ======================================================
+
 Pbindef(\scale_seq).clear;
 (
 Pbindef(\scale_seq,
@@ -536,83 +539,6 @@ Pbindef(\scale_seq,
 .expexp(inMin, inMax, outMin, outMax, clip: 'minmax')
 */
 
-===================================================
-          Синтез звука
-===================================================
-
-
-{SinOsc.ar()}.play;
-
-Какие недостатки у такого синтезатора?
-
-...
-
-Быстрый конструктор синта
-(
-{
-	SinOsc.ar();
-}.asSynthDef(fadeTime: 0.1, name: \my_first_synth__proto).add;
-)
-
-
-(
-Pbindef(\freq_seq_decreas, \instrument, \my_first_synth__proto);
-)
-
-
-Рандом в синтах
-Rand  It generates this when the SynthDef first starts playing, and remains fixed for the duration of the synth's existence.
-
-(
-{
-	SinOsc.ar(Rand(1, 5) * 220);
-}.asSynthDef(fadeTime: 0.1, name: \sin_freq_rnd__proto).add;
-)
-
-Pbindef(\freq_seq_decreas, \instrument, \sin_freq_rnd__proto);
-
-
-
-Параметры в паттернах
-...
-
-
-Ручной запуск
-...
-
-~my_first_synth1 = Synth(\my_first_synth__proto);
-
-~my_first_synth1.run(0);
-~my_first_synth1.run(1);
-
-~my_first_synth1.release(0.2);
-
-~my_first_synth1.set(\freq, 330);
-
-
-Отображение экземпляров синта
-s.plotTree;
-
-Отображение проектов (прототипов) синтов
-SynthDescLib.global.browse;
-
-
-// =============================================================
-// CAUSION: Always limit amplitude before listening sounds!
-// =============================================================
-
-(
-{
-	arg freq, amp; // two inputs
-	Limiter.ar( // just for safety: limit loud sounds to -0.4 dB
-		SinOsc.ar(freq) * amp, // audio signal
-		level: dbamp(-0.4)
-	);
-}.asSynthDef(fadeTime: 0.1, name: \sin_synth_proto).add;
-)
-
-Как можно конструировать звук. Аддитивный.
-...
 
 
 
@@ -687,28 +613,29 @@ q.value;
 
 
 Этот пример проигрывает ноты ровно 4 бита, а затем останавливается, даже если последовательность нот могла бы продолжаться дальше.
+
+~clck3 = TempoClock.new(120/60);
+
 (
 Pfindur(4,
-    Pbind(
-        \dur, Pseq([0.5, 0.25, 0.25], inf),
-        \midinote, Pseq([60, 62, 65, 67], inf)
-    )
-).play;
+  Pbindef(
+	\seq3,
+	\instrument, "kick808",
+	\dur, Pseq(
+		[
+			1,
+				Pxrand([Rest(1/4), 1/2, 2/3, Rest(2/3)], 2),
+			1,
+			Prand([1, Rest(1/2), 2, Rest(1/4)], 1)
+		], inf).trace,
+	\amp, 0.4,
+	\rel, 0.7,
+	\dist, 0.5,
+  )
+).play(~clck3);
 )
 
-
-(
-// Паттерн играет случайное количество нот длительностью 0.3 бита.
-// 0.3 не делится ровно на 1 или 4.
-Psync(
-    Pbind(
-        \dur, 0.3,
-        \note, Pseq([0, 2, 4, 7], 3) // Всего 12 нот по 0.3 = 3.6 бита
-    ),
-    quant: 1.0, // Округлить общую длительность до целого бита
-    maxdur: 4.0 // Но не дольше 4 битов
-).play;
-)
+~clck3.tempo = 2;
 
 
 ===================================================
