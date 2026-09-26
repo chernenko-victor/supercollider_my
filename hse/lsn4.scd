@@ -5,8 +5,12 @@ SCLOrkSynths.gui; // загружаем библиотеку
           Синтез звука
 ===================================================
 
-{SinOsc.ar()}.play;
+(
+{
+	SinOsc.ar()
 
+}.play;
+)
 Какие недостатки у такого синтезатора?
 
 ...
@@ -18,6 +22,22 @@ SCLOrkSynths.gui; // загружаем библиотеку
 }.asSynthDef(fadeTime: 0.1, name: \my_first_synth__proto).add;
 )
 
+(
+Pbindef(
+	\seq3,
+	// \instrument, "kick808",
+	\instrument, \my_first_synth__proto,
+	\dur, Pseq([1, 1, 1,
+		Prand([1, Rest(1/2), 2, Rest(1/4)], 1)
+	], inf).trace,
+	\amp, 0.4,
+	\rel, 0.7,
+	\dist, 0.5,
+).clock_(~clck3).play;
+)
+
+Pbindef(\seq3).stop;
+
 
 (
 Pbindef(\freq_seq_decreas, \instrument, \my_first_synth__proto);
@@ -27,18 +47,34 @@ Pbindef(\freq_seq_decreas, \instrument, \my_first_synth__proto);
 Рандом в синтах
 Rand  It generates this when the SynthDef first starts playing, and remains fixed for the duration of the synth's existence.
 
+LFTri
+
+LFPulse
+
+LFSaw
+
 (
 {
 	SinOsc.ar(Rand(1, 5) * 220);
 }.asSynthDef(fadeTime: 0.1, name: \sin_freq_rnd__proto).add;
 )
 
-Pbindef(\freq_seq_decreas, \instrument, \sin_freq_rnd__proto);
+Pbindef(\seq3, \instrument, \sin_freq_rnd__proto);
 
+Pbindef(\seq3).stop;
 
 
 Параметры в паттернах
 ...
+
+
+(
+{
+	arg freq = 440;
+	SinOsc.ar(freq);
+}.asSynthDef(fadeTime: 0.1, name: \my_first_synth__proto).add;
+)
+
 
 
 Ручной запуск
@@ -51,7 +87,7 @@ Pbindef(\freq_seq_decreas, \instrument, \sin_freq_rnd__proto);
 
 ~my_first_synth1.release(0.2);
 
-~my_first_synth1.set(\freq, 330);
+~my_first_synth1.set(\freq, rrand(1, 5) * 220);
 
 
 Отображение экземпляров синта
@@ -60,25 +96,90 @@ s.plotTree;
 Отображение проектов (прототипов) синтов
 SynthDescLib.global.browse;
 
-
-// =============================================================
+=============================================================
 // CAUSION: Always limit amplitude before listening sounds!
 // =============================================================
 
 (
 {
-	arg freq, amp; // two inputs
+	arg freq = 440, amp = 0.4; // two inputs
+	var sig = SinOsc.ar(freq) * amp;
+	sig = sig + (SinOsc.ar(2 *freq) * amp/2);
+	sig = sig + (SinOsc.ar(3 *freq) * amp/3);
+	sig = sig + (SinOsc.ar(4 *freq) * amp/4);
 	Limiter.ar( // just for safety: limit loud sounds to -0.4 dB
-		SinOsc.ar(freq) * amp, // audio signal
+		sig, // audio signal
 		level: dbamp(-0.4)
 	);
 }.asSynthDef(fadeTime: 0.1, name: \sin_synth_proto).add;
 )
 
+FreqScope.new();
+
+~my_first_synth1 = Synth(\sin_synth_proto);
+
+~my_first_synth1.run(0);
+~my_first_synth1.run(1);
+
+~my_first_synth1.release(0.2);
+
+~my_first_synth1.set(\amp, 0.9);
+
+~my_first_synth1.set(\freq, rrand(1, 5) * 220);
+
+
 Как можно конструировать звук. Аддитивный.
 ...
 
 
+======================================================
+                  вложенные паттерны III
+=======================================================
+
+
+(
+Pxrand(
+	[
+		Pbind(
+			\instrument, \sin_synth_proto,
+			\freq, Pser([1, 2, 3] * 110, inf).trace,
+			\dur, Pser([1, 2, 3], 4)),
+		Pbind(
+			\instrument, \default,
+			\freq, Pser([1, 2, 3] * 440, inf).trace,
+			\dur, Pser([1, 2, 3] * 0.25, 4))
+	],
+	10
+).play;
+)
+
+
+(
+Pser(
+	[
+		Pbindef(
+			\seq1_in_prand,
+			\instrument, \sin_synth_proto,
+			\freq, Pser([1, 2, 3] * 110, inf).trace,
+			\dur, Pser([1, 2, 3], 4)
+		),
+		Pbindef(
+			\seq2_in_prand,
+			\instrument, \default,
+			\freq, Pser([1, 2, 3] * 440, inf).trace,
+			\dur, Pser([1, 2, 3] * 0.25, 4)
+		)
+	],
+	inf
+).play;
+)
+
+(
+Pbindef(
+	\seq1_in_prand,
+	\freq, Pser([3, 2, 1] * 110, inf).trace,
+)
+)
 
 ======================================================
                   Типы движения
@@ -539,10 +640,6 @@ Pbindef(\scale_seq,
 .expexp(inMin, inMax, outMin, outMax, clip: 'minmax')
 */
 
-
-
-
-
 ===================================================
             MIDI In
 ===================================================
@@ -564,16 +661,45 @@ off = MIDIFunc.noteOff({ |veloc, num, chan, src|
     notes[num].release;
 });
 
-/*MIDIFunc.cc({|val, ccNum, chan, src|
-    val.postln; //this totally works!
-    ~synth.set(\cc1, val / 127);
-}, ccNum:1);*/
-
 q = { on.free; off.free; };
+)
+
+(
+~cc1 = MIDIFunc.cc({|val, ccNum, chan, src|
+    val.postln; //this totally works!
+    // ~synth.set(\cc1, val / 127);
+}, ccNum:1);
 )
 
 // when done:
 q.value;
+
+
+управлять синтезатором который работает в pattern
+надо в шину направлять
+
+// 2. Создаем шину для управления (например, для частоты среза фильтра)
+~cutoffBus = Bus.control(s, 1);
+~cutoffBus.set(800); // начальное значение
+
+// 3. Создаем MIDIFunc для чтения CC-сообщений
+// Замените ccNum на номер вашей ручки/ползунка на MIDI-контроллере
+MIDIFunc.cc({ |val, num, chan, src|
+    // Масштабируем значение MIDI (0-127) в диапазон частоты фильтра (200 - 10000 Гц)
+    var freq = val.linexp(0, 127, 200, 10000);
+    ~cutoffBus.set(freq);
+}, ccNum: 1); // 1 — это обычно колесо модуляции (ModWheel)
+
+
+~pattern = Pbind(
+    \instrument, \pattMidi,
+    \dur, 0.25,
+    \degree, Pseq([0, 2, 4, 7, 4, 2], inf),
+    // Привязываем аргумент синтезатора к нашей MIDI-шине:
+    \fftCutoff, ~cutoffBus.asMap,
+    \amp, 0.15
+).play;
+
 
 ===================================================
           Отложенный старт/ стоп
