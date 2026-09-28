@@ -1,3 +1,190 @@
+===================================================
+          Синтез звука
+===================================================
+
+(
+{
+	SinOsc.ar()
+
+}.play;
+)
+
+Какие недостатки у такого синтезатора?
+
+1. Нельзя выключить отдельный экземпляр.
+
+2. Нельзя ничего поменять. Повторный старт не выключает работающий экземпляр синта.
+
+s.plotTree; // показывает экземпляры синта
+
+3. Нельзя использовать в паттернах
+
+
+Быстрый конструктор синта
+(
+{
+	SinOsc.ar();
+}.asSynthDef(fadeTime: 0.1, name: \my_first_synth__proto).add;
+)
+
+(
+Pbindef(
+	\my_1st_synth_seq1,
+	\instrument, \my_first_synth__proto,
+	\dur, Pseq([1, 1, 1,
+		Prand([1, Rest(1/2), 2, Rest(1/4)], 1)
+	], inf).trace,
+	\amp, 0.4,
+).play;
+)
+
+Pbindef(\my_1st_synth_seq1).stop;
+
+
+Рандом в синтах - Rand
+
+(
+{
+	SinOsc.ar(Rand(1, 5) * 220);
+}.asSynthDef(fadeTime: 0.1, name: \sin_freq_rnd__proto).add;
+)
+
+Pbindef(\my_1st_synth_seq1, \instrument, \sin_freq_rnd__proto);
+
+Pbindef(\my_1st_synth_seq1).stop;
+
+
+Попробуйте вместо синуса другие периодические сигналы
+
+LFTri
+LFPulse
+LFSaw
+
+
+Параметры в паттернах
+
+Чтобы сделать входы в синтезаторе, надо перечислить их после ключевого слова arg. Если призвоить значение, то оно будет использовано по умолчанию.
+
+(
+{
+	arg freq = 440;
+	SinOsc.ar(freq);
+}.asSynthDef(fadeTime: 0.1, name: \my_first_synth__proto).add;
+)
+
+
+
+Ручной запуск
+
+~my_first_synth1 = Synth(\my_first_synth__proto);
+
+~my_first_synth1.run(0); // mute
+~my_first_synth1.run(1); // unmute
+
+~my_first_synth1.set(\freq, rrand(1, 5) * 220); // меняем частоту по рандому
+
+~my_first_synth1.release(0.2);  // выключение с релизом
+
+
+Pbindef(\my_1st_synth_seq1).clear;
+
+(
+Pbindef(
+	\my_1st_synth_seq1,
+	\instrument, \my_first_synth__proto,
+	\dur, Pseq([1, 1, 1,
+		Prand([1, Rest(1/2), 2, Rest(1/4)], 1)
+	] * 0.25, inf),
+	\amp, 0.4,
+	\freq, Pser([3, 2.5, 1.75, 1.25, 1] * 220, inf),
+).play;
+)
+
+
+(
+Pbindef(
+	\my_1st_synth_seq1,
+	\freq, nil,
+	\degree, Pser(
+	[
+		[-3, 1, 4],
+		Pxrand((-12..-4), 3),
+		5,
+		Prand(
+			[
+				Pseq([[-3, 1, 4], [-3, 1, 4] + 2, [-3, 1, 4] - 1.1], 1),
+				Pseq((3.1, 5.2..11.1), 2),
+				Pseq([1.1], 3),
+			],
+		1),
+	]
+	, inf).trace
+)
+)
+
+Pbindef(\my_1st_synth_seq1).stop;
+
+
+Обратите внимание: вместо \freq используется \degreee, но частота синта все равно изменется
+
+
+Отображение экземпляров синта
+s.plotTree;
+
+Отображение проектов (прототипов) синтов
+SynthDescLib.global.browse;
+
+
+
+=============================================================
+// При работе со звуком всегда используйте лимитер
+ =============================================================
+
+(
+{
+	arg freq = 440, amp = 0.4; // два входа
+	var sig = SinOsc.ar(freq) * amp; // меняем амплитуду
+	// добавляем гармоники
+	sig = sig + (SinOsc.ar(2 *freq) * amp/2);
+	sig = sig + (SinOsc.ar(3 *freq) * amp/3);
+	sig = sig + (SinOsc.ar(4 *freq) * amp/4);
+	sig.scope;
+	Limiter.ar( // на всяк случай лимитируем выход по -0.4 dB
+		sig, // входной сигнал
+		level: dbamp(-0.4) // переводми децибелы в rms
+	);
+}.asSynthDef(fadeTime: 0.1, name: \sin_synth_proto).add;
+)
+
+
+// В коллайдере нет приоритета арифметических операций ))
+// сравните
+
+1 + 2 * 3
+
+// и
+1 + (2 * 3)
+
+
+
+FreqScope.new(); // спектроскоп
+
+~my_first_synth1 = Synth(\sin_synth_proto);
+
+~my_first_synth1.run(0);
+~my_first_synth1.run(1);
+
+~my_first_synth1.set(\amp, 0.3);
+
+~my_first_synth1.set(\freq, rrand(1, 5) * 220);
+
+
+~my_first_synth1.release(0.2);
+
+
+Попробуйте разные сочетания частот и амплитуд синусов. Как это влияет на спектр?
+
+
 ======================================================
                   вложенные паттерны III
 =======================================================
@@ -506,123 +693,6 @@ Pbindef(\scale_seq,
 .expexp(inMin, inMax, outMin, outMax, clip: 'minmax')
 */
 
-
-//////////////////////////////
-//
-// legato, arpeggiato (strum)
-
-~test_clk = TempoClock.new(1);
-~test_clk.beats;
-
-(
-Pdef(\test_ptrn_pl,
-	Pbind(
-		\degree, Prand(
-			// [1, 3, 6, 8] + Prand([0, 1, 4], 1),
-			//([0, 0, 0, 0] + {rrand(1, 7)}),
-			//(1 .. 20).clump(4),
-			(1 .. 20).clump(4).lace(20).clump(4),
-			inf
-		),
-		\dur, Prand((1 .. 6) * 0.25, inf),
-		\strum, Pwhite(0.05, 0.5, inf),
-		\legato, Pexprand(0.1, 1, inf),
-		// \instrument, \cheappiano,
-		\scale, Scale.choose,
-		\amp, Pexprand(0.001, 0.3, inf),
-	).trace
-).play(~test_clk);
-)
-
-~test_clk.tempo = 0.3
-
-(
-Pdef(\test_ptrn_pl).stop;
-~test_clk.stop;
-)
-
-
-// ======================================================
-//             генераторы сишгалов, визуализация
-//             waveforms, visualization
-// ========================================== ===========
-
-// lo-freq generators
-// usefull for all frequencies
-(
-{
-	LFTri.ar(440) * 0.2;
-}.scope();
-)
-
-(
-{
-	LFTri.ar(4) * 0.2;
-}.plot(5);
-)
-
-// LFTri
-// LFSaw
-// Impulse
-// LFPulse
-// VarSaw
-
-
-// Band Limited Oscillators - for audible frequencies:
-// SinOsc, FSinOsc, Blip, Saw, Pulse
-
-(
-{
-	Saw.ar(440) * 0.2;
-}.scope();
-)
-
-(
-{
-	Saw.ar(4) * 0.2;
-}.plot(5);
-)
-
-// Aperiodic Sources
-// LFNoise0, LFNoise1, LFNoise2 - for random envelopes
-(
-{
-	LFNoise2.kr(4) * 0.2;
-}.plot(5);
-)
-
-// WhiteNoise, PinkNoise, BrownNoise - noise generators with different spectra
-
-
-// synths definition
-(
-{
-	arg freq, amp;
-	var sig;
-	sig = SinOsc.ar(freq * LFNoise2.kr(0.7).range(0.99, 1.01)) +
-	(SinOsc.ar(freq * 2 * LFNoise2.kr(0.7).range(0.99, 1.01)) / 2) +
-	(SinOsc.ar(freq * 3 * LFNoise2.kr(0.7).range(0.99, 1.01)) / 3) +
-	(SinOsc.ar(freq * 4 * LFNoise2.kr(0.7).range(0.99, 1.01)) / 4);
-	sig = amp * sig / 4;
-	[sig, sig];
-}.asSynthDef(fadeTime: 0.1, name: \sin_sum_proto).add;
-
-{
-	arg freq, amp;
-	var sig;
-	sig = VarSaw.ar(
-		freq,
-		width: LFNoise2.kr(3.1).range(0.3, 0.68),
-    );
-	sig = amp * sig;
-	[sig, sig];
-}.asSynthDef(fadeTime: 0.1, name: \var_saw_proto).add;
-)
-
-// Synth(\sin_sum_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
-// Synth(\var_saw_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
-
-
 ===================================================
             MIDI In
 ===================================================
@@ -658,7 +728,6 @@ q = { on.free; off.free; };
 q.value;
 
 
-
 управлять синтезатором который работает в pattern
 надо в шину направлять
 
@@ -683,18 +752,6 @@ MIDIFunc.cc({ |val, num, chan, src|
     \fftCutoff, ~cutoffBus.asMap,
     \amp, 0.15
 ).play;
-
-
-
-//////////////////////////
-//
-//Modulation sound by kr periodic gens
-
-
-//////////////////////////
-//
-// Change data between synth by Bus.control
-
 
 
 ===================================================
@@ -935,8 +992,12 @@ y.postln;
 (1 .. 20).clump(4).lace(20).clump(4)
 
 
+
+//////////////////////////////////
+//
+//      Envelopes
 ==============================================
-               Огибающие (Envelopes)
+               Огибающие
 ==============================================
 
 
@@ -1336,6 +1397,10 @@ FBSineC
 Logistic
 
 
+//////////////////////////
+//
+// Change data between synth by Bus.control
+
 
 // ....
 
@@ -1443,276 +1508,91 @@ b.sendMsg("/fader1", 0.5);
 b.free;
 
 
+//////////////////////////////
+//
+// legato, arpeggiato (strum)
 
-===============================================
-
-семплы (sampling)
-
-===============================================
-
-(
-// Загружаем семпл в специальную область памяти - буфер (Buffer). Это одномерный массив чисел, индексы начинаются с 0/
-~buf1 = Buffer.read(s, "D:/audio/samples/04-mic2-231205_1439.wav"); // Путь к файлу надо заменить
-~buf1.numChannels; //показывает кол-во каналов
-
-~buf2_chnl1 = Buffer.readChannel(s, "D:/audio/music/chernenko/lyra8_230426_2.wav", channels: [0]);
-~buf2_chnl1.numChannels;
-
-~buf3_chnl1 = Buffer.readChannel(s, "D:/audio/samples/vocal/numbers.wav", channels: [0]);
-~buf3_chnl1.numChannels;
-
-
-~buf4_glitch_loops = Buffer.read(s, "C:/home/Admin/audio/44446__looplicator__glitch-loops-102025/830048__looplicator__128-bpm-industrial-glitch-loop-15441-wav.wav");
-~buf4_glitch_loops.numChannels;
-
-~buf5_rock_breakbeat = Buffer.read(s, "D:/audio/samples/570888__kaypira_fp__drum-loop-120bpm-rock-breakbeat.wav");
-
-)
-
-~buf5_rock_breakbeat.play;
-
-
-///////////////////////////////////////////
-//         Подготовка к работе
-///////////////////////////////////////////
-
-// Надо запустить код из lib/fx.scd
-// lib/sample.scd
-
-// Включаем финальную обработку
-(
-~master = Synth(\master_proto, [\in_bus, ~master_send]);
-)
-
-
-////////////////////////////////////
-// BufRd - свободное управление скоростью и направлением воспроизведения
-(
-SynthDef(\player_var_speed_proto, {
-	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0, begin = 0, end = 1;
-	var out;
-	out = BufRd.ar(
-		2,
-		buf,
-		LFNoise1.ar(100) * BufFrames.ir(buf)
-		// Варианты обхода буфера:
-		// SinOsc.ar(0.1, 0, 0.5, 0.5) * BufFrames.ir(buf) // последовательное изменение направления
-		/*
-		(1-LFSaw.ar(BufDur.ir(buf).reciprocal)).
-		    range(BufFrames.ir(buf) * begin, BufFrames.ir(buf) * end)
-		// Обратное воспроизведение части семпла
-		*/
-	);
-	Out.ar(
-		out_bus,
-		dbamp(master_send_lvl_db) * out
-	);
-}).add;
-)
-
-
-~player_var_speed = Synth(\player_var_speed_proto, [\buf, ~buf1, \out_bus, ~master_send]);
-~player_var_speed.free;
-// , \begin, 0.3, \end, 0.7
-
-
-////////////////////////////////////////////////
-
-
-// ~granulator1 = Synth(\granulator_rate_ctrl_rec_1fx_send__proto, [\buf, ~buf2_chnl1, \out_bus, ~master_send]);
-
+~test_clk = TempoClock.new(1);
+~test_clk.beats;
 
 (
-{((LFNoise2.kr(1).range(0.1, 10))**(-1)).poll}.play;
+Pdef(\test_ptrn_pl,
+	Pbind(
+		\degree, Prand(
+			// [1, 3, 6, 8] + Prand([0, 1, 4], 1),
+			//([0, 0, 0, 0] + {rrand(1, 7)}),
+			//(1 .. 20).clump(4),
+			(1 .. 20).clump(4).lace(20).clump(4),
+			inf
+		),
+		\dur, Prand((1 .. 6) * 0.25, inf),
+		\strum, Pwhite(0.05, 0.5, inf),
+		\legato, Pexprand(0.1, 1, inf),
+		// \instrument, \cheappiano,
+		\scale, Scale.choose,
+		\amp, Pexprand(0.001, 0.3, inf),
+	).trace
+).play(~test_clk);
 )
 
+~test_clk.tempo = 0.3
+
 (
-{((LFNoise2.kr(0.1).exprange(0.01, 50))**(-1)).poll}.play;
+Pdef(\test_ptrn_pl).stop;
+~test_clk.stop;
 )
+
+================================================
+дополнения
+================================================
 
 (
 {
-	arg buf = 1000;
-	var trig, rate;
-	rate = ((LFNoise2.kr(0.3).exprange(0.01, 50))**(-1));
-	trig = Impulse.kr(
-		rate
-	);
-	TGrains.ar(
-		numChannels: 2,
-		trigger: trig,
-		bufnum: buf,
-		centerPos: BufDur.kr(buf) * LFNoise2.kr(1).range(0.01, 0.99),
-		dur: BufDur.kr(buf) * 0.1,
-		amp: 1,
-	);
-}.play(args: [\buf, ~buf3_chnl1]);
+	"test fork".postln;
+	3.wait;
+
+	rrand(1, 11).postln;
+	Pdef(\test_ptrn_pl,
+		Pbind(
+			\degree, Prand(
+				// [1, 3, 6, 8] + Prand([0, 1, 4], 1),
+				//([0, 0, 0, 0] + {rrand(1, 7)}),
+				(1 .. 20).clump(4),
+				inf
+			)
+		).trace
+	).play;
+	10.wait;
+
+	"end function fork".postln;
+	Pdef(\test_ptrn_pl).stop;
+}.fork;
 )
 
-//////////////////////////
-// fft
-
-///////////////////////////////////
-// Преобразование Фурье для моно-сигнала:
-// chainL = FFT(LocalBuf(2048), in);
-// используется локальный буфер, которые доступен только внутри синта
-
-(
-SynthDef(\fft_demo_proto, {
-	arg out_bus = 0, master_send_lvl_db = 0.0;
-    var out, in, chain;
-
-	in = WhiteNoise.ar(0.1);
-    chain = FFT(LocalBuf(2048), in); // Прямое преобразование Фурье
-	//// FD begin
-
-	// chain = FFT_Obj(chain)
-
-    out = IFFT(chain); // Обратный FFT
-
-	// TD begin
-
-	Out.ar(out_bus, dbamp(master_send_lvl_db) * out);
-}).add;
-
-)
-
-~fft_demo = Synth(\fft_demo_proto, [\out_bus, ~master_send]);
-~fft_demo.free;
+================================
 
 
-/////////////////////////////////////////
-// PV_BinShift Сдвигает и растягивает частотные корзины
-// shift - кол-во частотных корзин, на которое будет произведен сдвиг
-// stretch - коэффициент, на который будут умножены частоты всех корзин
-(
-SynthDef(\fft_bin_shift_proto, {
-	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0, stretch = 1, shift = 0;
-    var out, in, chain;
-
-	stretch = MouseX.kr(-10.1, 10.1);
-	// shift = SinOsc.kr(0.5).range(5, 100);
-	shift = LFNoise2.kr(0.5).range(5, 100);
-
-	in = PlayBuf.ar(2, buf, BufRateScale.kr(buf), doneAction: 2);
-    chain = FFT(LocalBuf(2048.dup(2), 1), in); // Прямое преобразование Фурье
-	chain = PV_BinShift(chain, stretch: stretch, shift: shift);
-    out = IFFT(chain); // Обратный FFT
-
-	// out = Compander.ar(out, out, 0.1, 3.5, 0.3);
-
-	Out.ar(out_bus, dbamp(master_send_lvl_db) * out);
-}).add;
-
-)
-
-~fft_bin_shift = Synth(\fft_bin_shift_proto, [\buf, ~buf3_chnl1, \out_bus, ~master_send, \shift, 10, \stretch, 1]);
-~fft_bin_shift.free;
+нельзя использовать индекс, который больше или равен размера массива
+чтобы не проверять, можно вместо [] использовать методы:
+.clipAt(index)
+.wrapAt(index)
+.foldAt(index)
 
 
-///////////////////////////////////////////
-// PV_MagShift сдвигает только амплитуды частотных корзин, фазы остаются на месте
+rotate(n: 1) // перестановка элементов в массиве
 
-(
-SynthDef(\fft_mag_shift_proto, {
-	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0, stretch = 1, shift = 0;
-    var out, in, chain;
+.reshape( ... shape) //
 
-	in = PlayBuf.ar(2, buf, BufRateScale.kr(buf), doneAction: 2);
-	// in = SinOsc.ar();
-    chain = FFT(LocalBuf(2048.dup(2), 1), in);
-	//Здесь можно вставлять объекты для работы со спектром
-	chain = PV_MagShift(chain, stretch, shift);
-	out = IFFT(chain); // Обратный FFT
-
-	Out.ar(out_bus, dbamp(master_send_lvl_db) * out);
-}).add;
-
-)
-
-~fft_mag_shift = Synth(\fft_mag_shift_proto, [\buf, ~buf5_rock_breakbeat, \out_bus, ~master_send, \shift, 4, \stretch, 2]);
-~fft_mag_shift.free;
+.windex //Interprets the array as a list of probabilities which should sum to 1.0 and returns a random index value based on those probabilities.
 
 
-/*UGens - дополнительные серверные плагины (server plugins)
 
-Например https://github.com/supercollider/sc3-plugins (см. PV_Morph, PV_SoftWipe и др.)
+==============================================
+итеграция в VS code
+==============================================
+/*
+vscode-supercollider (originally developed by scztt and maintained via community contributors). It uses the Language Server Protocol (LSP) to communicate directly with SuperCollider (sclang).
 
-или VST плагины в SC https://git.iem.at/pd/vstplugin/-/releases
 
-
-1. Скачиваем https://github.com/supercollider/sc3-plugins/releases архив для нужной ОС
-
-2. Определяем директорию для расширений
-
-Platform.userExtensionDir;
-
-3. Создаем в ней поддиректорию
-
-4. Распаковываем туда архив
-
-5. Перезапускаем грфическую оболочку Super Collider
-При старте вы увидите сообщения
-compiling class library...
-...
-Compiling directory "Название директории"
-
-Там будет название поддиректории, значит все установилось, можно пользоваться*/
-
-(
-{
-	var
-	  buf = ~buf1,
-	  rate = 1,
-	  sin_in,
-	  chain,
-	  out_sig,
-	  out_sig2,
-	  stretch = MouseX.kr(0.1, 10),
-	  // stretch = 1,
-	  shift = MouseY.kr(-100, 100),
-	  sig_in2,
-	  buf2 = ~buf5_rock_breakbeat,
-	  chain2
-	;
-	sin_in = PlayBuf.ar(
-			2,
-			buf,
-			BufRateScale.kr(buf) * rate,
-			loop: 1
-		);
-
-	sig_in2 = PlayBuf.ar(
-			2,
-			buf2,
-			BufRateScale.kr(buf2) * rate,
-			loop: 1
-		);
-
-	// sig_in2 = DelayC.ar(sin_in, 2, 2);
-
-	chain = FFT(LocalBuf(2048.dup(2), 1), sin_in);
-	chain2 = FFT(LocalBuf(2048.dup(2), 1), sig_in2);
-	// Прямое преобразование Фурье
-	// chain = PV_BinShift(chain, stretch: stretch, shift: shift);
-	// chain = PV_BinScramble(chain, MouseX.kr(0.1, 1), 0.1, MouseY.kr > 0.5);
-	/*
-    chain = PV_ConformalMap(
-		chain,
-		MouseX.kr(0.01,2.0, 'exponential'),
-		MouseY.kr(0.01,10.0, 'exponential')
-	);
-    */
-	// chain = PV_Diffuser(chain, MouseY.kr > 0.5); // Adds a different constant random phase shift to each bin. When triggered, it selects a new set of random phases.
-	// chain = PV_MagFreeze(chain, MouseY.kr > 0.5);
-	// chain = PV_MagSmear(chain, MouseX.kr(0, 100));
-	// chain = PV_RectComb(chain, MouseX.kr(0, 32), MouseY.kr, 0.2);
-	// chain= PV_Mul(chain2, chain); // full complex mult
-	// chain = PV_MagMul(chain2, chain); // Multiplies magnitudes of two inputs and keeps the phases of the first input.
-	// chain = PV_CopyPhase(chain, chain2); // Combines magnitudes of first input and phases of the second input.
-    out_sig = IFFT(chain); // Обратный FFT
-	// out_sig2 = IFFT(chain2); // Обратный FFT
-
-	out_sig;
-}.play;
-)
+FluCoMa Gerard Roma
+*/
