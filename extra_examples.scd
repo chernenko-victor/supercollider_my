@@ -2,7 +2,71 @@ s.boot;
 
 ~clck1 = TempoClock.new(60/60);
 
+~clck1.beats;
 
+
+================================================
+    при изменении проекта синта звучашие экземпляры не меняются
+================================================
+
+(
+{
+	LFTri.ar(220) * 0.2;
+}.asSynthDef(fadeTime: 0.1, name: \tri_synth__proto).add;
+)
+
+
+~tri_synth1 = Synth(\tri_synth__proto);
+
+
+(
+{
+	LFTri.ar(440) * 0.2;
+}.asSynthDef(fadeTime: 0.1, name: \tri_synth__proto).add;
+)
+
+~tri_synth2 = Synth(\tri_synth__proto);
+
+~tri_synth1.free;
+~tri_synth2.free;
+
+================================================
+    синхронизация с offbeat
+================================================
+(
+Pbindef(\def_seq1,
+	\dur, 1
+).clock_(~clck1).quant_(1);
+)
+
+(
+Pbindef(\kick808_float_quant_seq,
+	\dur, 1,
+	\instrument, "kick808",
+	\amp, 0.5,
+).clock_(~clck1).quant_(1.5); // задает сетку 1.5 * n, n = 1, 2, 3  ... Так что может и на третьей доле вступить и на 1.5 ))
+
+)
+
+Pbindef(\def_seq1).play;
+
+Pbindef(\kick808_float_quant_seq).play;
+
+Pbindef(\kick808_float_quant_seq).quant = 1.33; // обновится только после рестарта
+
+Pbindef(\kick808_float_quant_seq).quant = Quant.new(quant: 1, phase: 0.5); // Тут он сначала ищет бит кратный значению quant, а потом от него откладывает еще полбита, так что всегда гарантированно запустится в offbeat
+
+// чтобы сдеать phasing, надо 2 клока и одному из них менять темп
+
+Pbindef(\def_seq1).stop;
+
+Pbindef(\kick808_float_quant_seq).stop;
+Pbindef(\kick808_float_quant_seq).clear;
+
+
+================================================
+    примеры разных паттернов
+================================================
 (
 Pbindef(\kick808_my,
 	// \instrument, "kick808",
