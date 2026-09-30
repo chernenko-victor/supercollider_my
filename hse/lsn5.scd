@@ -1,3 +1,21 @@
+SCLOrkSynths.gui; // загружаем библиотеку
+
+(
+{
+	arg freq = 440, amp = 0.4; // два входа
+	var sig = SinOsc.ar(freq) * amp; // меняем амплитуду
+	// добавляем гармоники
+	sig = sig + (SinOsc.ar(2 *freq) * amp/2);
+	sig = sig + (SinOsc.ar(3 *freq) * amp/3);
+	sig = sig + (SinOsc.ar(4 *freq) * amp/4);
+	sig.scope;
+	Limiter.ar( // на всяк случай лимитируем выход по -0.4 dB
+		sig, // входной сигнал
+		level: dbamp(-0.4) // переводми децибелы в rms
+	);
+}.asSynthDef(fadeTime: 0.1, name: \sin_synth_proto).add;
+)
+
 ======================================================
                   вложенные паттерны III
 =======================================================
@@ -541,9 +559,8 @@ Pdef(\test_ptrn_pl).stop;
 ~test_clk.stop;
 )
 
-
 // ======================================================
-//             генераторы сишгалов, визуализация
+//             генераторы сигналов, визуализация
 //             waveforms, visualization
 // ========================================== ===========
 
@@ -567,6 +584,11 @@ Pdef(\test_ptrn_pl).stop;
 // LFPulse
 // VarSaw
 
+(
+{
+	LFPulse.ar(4) * 0.2;
+}.plot(5);
+)
 
 // Band Limited Oscillators - for audible frequencies:
 // SinOsc, FSinOsc, Blip, Saw, Pulse
@@ -619,9 +641,66 @@ Pdef(\test_ptrn_pl).stop;
 }.asSynthDef(fadeTime: 0.1, name: \var_saw_proto).add;
 )
 
-// Synth(\sin_sum_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
-// Synth(\var_saw_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
+Synth(\sin_sum_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
+Synth(\var_saw_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
 
+===================================================
+                     циклы (loops)
+===================================================
+
+
+(
+10.do({
+	arg ...args_arr;
+	args_arr.postln;
+})
+)
+
+
+(
+{
+	arg freq, amp;
+	var sig = 0, harm_num = 10; // формальное начальное значение
+
+	harm_num.do({
+	    arg ...args_arr;
+	    // args_arr.postln;
+		sig =  sig + (
+			SinOsc.ar(
+				freq *
+				(args_arr[0] + 1) *
+				LFNoise2.kr(0.7).range(0.99, 1.01)
+			) / (args_arr[0] + 1)
+		);
+    });
+
+	sig = amp * sig / harm_num;
+	[sig, sig];
+}.asSynthDef(fadeTime: 0.1, name: \sin_sum_loop__proto).add;
+)
+
+~sin_sum_loop1 = Synth(\sin_sum_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
+
+~sin_sum_loop1.release(0.2);
+
+(
+~voice_num = rrand(1, 4);
+~notes_arr = Array.newClear(~voice_num);
+
+~voice_num.do({
+	arg ...args_arr;
+	// args_arr.postln;
+	~notes_arr[args_arr[0]] = Synth(\sin_sum_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
+})
+)
+
+(
+~voice_num.do({
+	arg ...args_arr;
+	// args_arr.postln;
+	~notes_arr[args_arr[0]].release(0.2);
+})
+)
 
 ===================================================
             MIDI In
@@ -685,15 +764,100 @@ MIDIFunc.cc({ |val, num, chan, src|
 ).play;
 
 
+// ==========================================
+//             types of musical texture
+//             типы музыкальной фактуры
+// ==========================================
+
+// melody
+(
+Pbind(
+	\instrument, \var_saw_proto,
+	\degree, Prand((0..8), inf),
+	\amp, Pwhite(0.05, 0.5, inf),
+	\dur, Prand(((1..6) ++ [Rest(2), Rest(4)]) * 0.25, inf),
+).play;
+)
+
+// accords
+(
+Pbind(
+	\instrument, \sin_sum_proto,
+	// \degree, Prand((0..8), inf).clump(3),
+	\degree, Ptuple([
+		Prand((-3..4), inf),
+		Pseq([5, 7, 8], inf),
+		Prand((8..12), inf),
+	], inf),
+	\amp, Pwhite(0.05, 0.5, inf),
+	\dur, Prand(([2, 4, 6] ++ [Rest(2)]), inf),
+).play;
+)
+
+// line movement
+(
+Pbind(
+	\instrument, \var_saw_proto,
+	\note, Pwalk((1..12), 1, 1, 7).trace, // chromatic movement, up direction
+	// \note, Pwalk((1..12), 1, Pseq([-1, 1], inf), 7), // up-down direction
+	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Pseq([-1, 1], inf), 7).trace, // step variation
+	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Prand([-1, 1], inf), 7).trace, // random direction
+	\amp, Pwalk((1..8) * 0.1, 1, Prand([-1, 1]), 3),
+	\dur, 0.25,
+).play;
+)
+
+
+=======================================================
+           LFO
+=======================================================
+
+(
+{
+	// arg freq =440, amp = 0.2;
+	var
+	  sig,
+	  pulse_witdth,
+	  amp_env,
+	  duration = 0.5,
+	  freq =440,
+	  amp = 0.2
+	;
+
+	freq = LFNoise0.kr(1).range(1, 10).ceil / (LFNoise0.kr(0.72).range(2, 6).ceil) * 440;
+
+	duration = LFNoise0.kr(0.25).range(1, 10).ceil * 0.25;
+
+	pulse_witdth = LFNoise2.kr(0.3).range(0.2, 1.5);
+	amp_env = SinOsc.kr(freq: duration);
+	// amp_env = LFSaw.kr(freq: 0.1).poll;
+	sig = LFPulse.ar(
+		freq: freq,
+		iphase: 0,
+		width: (0.5 * pulse_witdth).poll
+	) * amp_env * amp;
+
+	sig = Limiter.ar(in: sig, level: dbamp(-0.4));
+}.asSynthDef(fadeTime: 0.2, name: \self_trig__proto).add;
+)
+
+~self_trig1 = Synth(\self_trig__proto);
+~self_trig1.release(0.3);
 
 //////////////////////////
 //
-//Modulation sound by kr periodic gens
+// Exchange data between synth by Bus.control
 
 
-//////////////////////////
-//
-// Change data between synth by Bus.control
+Changed
+
+(
+{
+    var changingSignal = LFNoise0.ar(1000);
+    var changed = Changed.ar(changingSignal);
+    [changingSignal, changed]
+}.plot
+);
 
 
 
@@ -1238,48 +1402,6 @@ Pdef(
 ...
 
 
-// ==========================================
-//             types of musical texture
-//             типы музыкальной фактуры
-// ==========================================
-
-// melody
-(
-Pbind(
-	\instrument, \var_saw_proto,
-	\degree, Prand((0..8), inf),
-	\amp, Pwhite(0.05, 0.5, inf),
-	\dur, Prand(((1..6) ++ [Rest(2), Rest(4)]) * 0.25, inf),
-).play;
-)
-
-// accords
-(
-Pbind(
-	\instrument, \sin_sum_proto,
-	// \degree, Prand((0..8), inf).clump(3),
-	\degree, Ptuple([
-		Prand((-3..4), inf),
-		Pseq([5, 7, 8], inf),
-		Prand((8..12), inf),
-	], inf),
-	\amp, Pwhite(0.05, 0.5, inf),
-	\dur, Prand(([2, 4, 6] ++ [Rest(2)]), inf),
-).play;
-)
-
-// line movement
-(
-Pbind(
-	\instrument, \var_saw_proto,
-	\note, Pwalk((1..12), 1, 1, 7).trace, // chromatic movement, up direction
-	// \note, Pwalk((1..12), 1, Pseq([-1, 1], inf), 7), // up-down direction
-	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Pseq([-1, 1], inf), 7).trace, // step variation
-	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Prand([-1, 1], inf), 7).trace, // random direction
-	\amp, Pwalk((1..8) * 0.1, 1, Prand([-1, 1]), 3),
-	\dur, 0.25,
-).play;
-)
 
 
 
