@@ -22,24 +22,37 @@ SCLOrkSynths.gui; // загружаем библиотеку
 
 
 (
-Pxrand(
+~rand_seq = Pxrand(
 	[
 		Pbind(
 			\instrument, \sin_synth_proto,
 			\freq, Pser([1, 2, 3] * 110, inf).trace,
-			\dur, Pser([1, 2, 3], 4)),
+			\dur, Pser([1, 2, 3], 4)
+		),
 		Pbind(
 			\instrument, \default,
 			\freq, Pser([1, 2, 3] * 440, inf).trace,
-			\dur, Pser([1, 2, 3] * 0.25, 4))
+			\dur, Pser([1, 2, 3] * 0.25, 4)
+		),
+		Pbindef( \feedbackPad3,
+			\instrument, "feedbackPad3",
+			\dur, 2,
+			\legato, 0.9,
+			\sampleRate, Pwhite(20.0, 25.0),
+			\midinote, Pseq([ // Welcome to the ocean!
+				[43, 47], [41, 48], [43, 47], [41, 48],
+				[43, 47], [41, 48], [41, 45], [39, 46],
+			])
+		),
 	],
 	10
 ).play;
 )
 
+~rand_seq.stop;
 
 (
-Pser(
+~seq_of_seq = Pser(
 	[
 		Pbindef(
 			\seq1_in_prand,
@@ -64,6 +77,8 @@ Pbindef(
 	\freq, Pser([3, 2, 1] * 110, inf).trace,
 )
 )
+
+~seq_of_seq.stop;
 
 ======================================================
                   Типы движения
@@ -97,7 +112,7 @@ Pbindef(\prophet5pwmStrings).clear;
 (
 Pbindef(\prophet5pwmStrings,
 	\instrument, "prophet5pwmStrings",
-	\note, Pwalk((12..1), stepPattern: Pser([1, 2], inf), directionPattern: 1),
+	\note, Pwalk((12..1), stepPattern: Pser([1, 2], inf), directionPattern: 1).trace,
 	\ctranspose, -12,
 	\amp, 0.1,
 	\dur, Pseq([Pn(0.5, 8), Pn(0.25, 8), Pn(0.125, 16)], 1),
@@ -107,6 +122,9 @@ Pbindef(\prophet5pwmStrings,
 	\rq, Pn(Pseries(0.9, -0.1, 5), inf),
 ).play;
 );
+
+// cosmic sounds ))
+Pwalk([(12..1), (9..-3)], stepPattern: Pser([1, 2], inf), directionPattern: 1)
 
 Pwalk((2..13), stepPattern: Pser([1, 2], inf), directionPattern: 1).asStream.nextN(15)
 
@@ -124,6 +142,8 @@ Pwalk((1..12), stepPattern: Pseq([1, 2], inf), directionPattern: Pseq([-1, 1], i
 
 Очень симметричное движение быстро утомляет, так что хорошо делать ускорение или замедление каких-то параметров, напр., темпа. Будет "двойное впечатление": повторение и развитие.
 
+
+~clck3 = TempoClock.new(120/60);
 Pbindef(\dist_guit_seq1).clear;
 
 (
@@ -169,7 +189,7 @@ Pbindef(
 		)
 		+ 48).midicps,
 		\dur, Pwalk(
-		  (1..12),
+		(1..12) ++ Prand([Rest(1), Rest(1), Rest(3), Rest(6)], 1),
 		  stepPattern: Prand([-2, -1, 0, 1, 2], inf),
 		  directionPattern: Prand([-1, 1], inf)
 	) * 0.05
@@ -237,9 +257,6 @@ Pbindef(\prophet5pwmStrings,
 	\freq, Pn(Pseries(440, 20, 10), inf).trace,
 	\amp, 0.1,
 	\dur, Pseq([Pn(0.5, 8), Pn(0.25, 8), Pn(0.125, 16)], inf),
-	// \lfowidth, Pn(Pseries(0.0, 0.025, 7), inf),
-	// \lforate, Pn(Pseries(2, 1, 11), inf),
-	// \rq, Pn(Pseries(0.9, -0.1, 5), inf),
 ).play;
 );
 
@@ -362,7 +379,7 @@ Pbindef(\amp_seq,
 Pgeom(0.05, 1.18, 18).asStream.nextN(18);
 
 
-Децибел - это логарифм отношения двух величин, т.е. экспоненцияальной функции. Логарифм "приводит" экспоненту к почти линейной зависимости. Можно прибавлять, а не умножать.
+Децибел - это логарифм отношения двух величин, т.е. логарифм от экспоненциальной функции. Логарифм "приводит" экспоненту к почти линейной зависимости. Можно прибавлять, а не умножать.
 
 SPL (Sound Pressure Level), уровень звукового давления. Измеряется эта величина в децибелах (дБ) и показывает, насколько громким является звук.
 
@@ -564,31 +581,61 @@ Pdef(\test_ptrn_pl).stop;
 //             waveforms, visualization
 // ========================================== ===========
 
-// lo-freq generators
-// usefull for all frequencies
+// Универсальные генераторы, используются как в кач-ве LFO, так и на звуковой частоте
 (
 {
 	LFTri.ar(440) * 0.2;
 }.scope();
 )
 
+В спектре идеальной треугольной волны (triangle wave) содержатся только нечетные гармоники, а их амплитуды убывают обратно пропорционально квадрату их номера.
+
+
+Чередование фаз: В ряде Фурье для треугольной волны знаки гармоник чередуются: \(1, -1/9, 1/25, -1/49...\) Это означает, что каждая последующая нечетная гармоника инвертирована по фазе на 180° относительно предыдущей.
+
+график
 (
 {
 	LFTri.ar(4) * 0.2;
 }.plot(5);
 )
 
-// LFTri
+Спектр
+FreqScope.new;
+
+
+(
+{
+	arg freq = 440, amp = 0.4; // два входа
+	var sig = SinOsc.ar(freq) * amp; // меняем амплитуду
+	// добавляем гармоники
+	sig = sig + (SinOsc.ar(3 *freq) * amp/(3.pow(2)));
+	sig = sig + (SinOsc.ar(5 *freq) * amp/(5.pow(2)));
+	sig = sig + (SinOsc.ar(7 *freq) * amp/(7.pow(2)));
+	sig.scope;
+	Limiter.ar( // на всяк случай лимитируем выход по -0.4 dB
+		sig, // входной сигнал
+		level: dbamp(-0.4) // переводми децибелы в rms
+	);
+}.asSynthDef(fadeTime: 0.1, name: \my_tri__proto).add;
+)
+
+~my_tri = Synth(\my_tri__proto);
+~my_tri.free;
+
 // LFSaw
-// Impulse
+В спектре восходящей пилообразной волны (sawtooth wave) присутствуют абсолютно все гармоники — как четные, так и нечетные, а их амплитуды убывают обратно пропорционально их номеру (\(1/n\)).
+Направление пилы: Спектральный состав восходящей (ramp up) и нисходящей (ramp down) пилы абсолютно одинаков по амплитудам. Разница заключается только в фазах гармоник, но на слух человеческое ухо эту разницу в фазах практически не воспринимает.
+
 // LFPulse
-// VarSaw
 
 (
 {
 	LFPulse.ar(4) * 0.2;
 }.plot(5);
 )
+• В квадратной волне (меандре) амплитуды убывают медленнее — пропорционально \(1/n\) (-6 дБ на октаву). В треугольной волне они убывают как \(1/n^2\) (-12 дБ на октаву). Именно поэтому треугольная волна звучит гораздо мягче, глуше и ближе к синусоиде, так как высокие частоты в ней подавлены сильнее.
+
 
 // Band Limited Oscillators - for audible frequencies:
 // SinOsc, FSinOsc, Blip, Saw, Pulse
@@ -612,6 +659,11 @@ Pdef(\test_ptrn_pl).stop;
 	LFNoise2.kr(4) * 0.2;
 }.plot(5);
 )
+
+// VarSaw
+// Impulse
+
+
 
 // WhiteNoise, PinkNoise, BrownNoise - noise generators with different spectra
 
@@ -772,7 +824,7 @@ MIDIFunc.cc({ |val, num, chan, src|
 // melody
 (
 Pbind(
-	\instrument, \var_saw_proto,
+	// \instrument, \var_saw_proto,
 	\degree, Prand((0..8), inf),
 	\amp, Pwhite(0.05, 0.5, inf),
 	\dur, Prand(((1..6) ++ [Rest(2), Rest(4)]) * 0.25, inf),
@@ -782,7 +834,7 @@ Pbind(
 // accords
 (
 Pbind(
-	\instrument, \sin_sum_proto,
+	// \instrument, \sin_sum_proto,
 	// \degree, Prand((0..8), inf).clump(3),
 	\degree, Ptuple([
 		Prand((-3..4), inf),
@@ -797,7 +849,7 @@ Pbind(
 // line movement
 (
 Pbind(
-	\instrument, \var_saw_proto,
+	// \instrument, \var_saw_proto,
 	\note, Pwalk((1..12), 1, 1, 7).trace, // chromatic movement, up direction
 	// \note, Pwalk((1..12), 1, Pseq([-1, 1], inf), 7), // up-down direction
 	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Pseq([-1, 1], inf), 7).trace, // step variation
@@ -1405,62 +1457,6 @@ Pdef(
 
 
 
-///////////////////////////////////////
-//
-//       feedback, chaos
-//
-////////////////////////////////////////
-
-// but for using in patterns we must make it synth
-(
-{
-	arg freq = 440; // inputs of synth
-	// we can send values from Pbind by arg's name
-	// for ex., \freq, 220,
-
-	var feedback_mod = LFNoise2.kr(1) * 1.9;
-	SinOscFB.ar(freq, 0.1 * 2 * 3.14 * feedback_mod ) * 0.2;
-}.asSynthDef(fadeTime: 0.1, name: \fb_sin__proto).add;
-)
-
-
-(
-// as a frequency control
-{ SinOsc.ar(
-	HenonC.ar(
-		4,
-		MouseX.kr(1, 1.4),
-		MouseY.kr(1, 0.3)
-	)*800+900
-)
-* 0.04 ! 2 }.scope();
-)
-
-LatoocarfianL
-
-(
-{
-HenonC.ar(
-		4,
-		MouseX.kr(1, 1.4),
-		MouseY.kr(1, 0.3)
-	);
-}.scope;
-)
-
-FBSineC
-
-{ SinOsc.ar(Lag.ar(LorenzL.ar(MouseX.kr(1, 200)), 3e-3)*800+900)*0.4 }.play(s);
-
-{ SinOsc.ar(StandardL.ar(40, MouseX.kr(0.9, 4))*800+900)*0.4 }.play(s);
-
-
-Logistic
-
-
-
-// ....
-
 //////////////////////////
 //
 // Change data between synth by OSC
@@ -1838,59 +1834,3 @@ Compiling directory "Название директории"
 	out_sig;
 }.play;
 )
-
-
-================================================
-дополнения
-================================================
-
-(
-{
-	"test fork".postln;
-	3.wait;
-
-	rrand(1, 11).postln;
-	Pdef(\test_ptrn_pl,
-		Pbind(
-			\degree, Prand(
-				// [1, 3, 6, 8] + Prand([0, 1, 4], 1),
-				//([0, 0, 0, 0] + {rrand(1, 7)}),
-				(1 .. 20).clump(4),
-				inf
-			)
-		).trace
-	).play;
-	10.wait;
-
-	"end function fork".postln;
-	Pdef(\test_ptrn_pl).stop;
-}.fork;
-)
-
-================================
-
-
-нельзя использовать индекс, который больше или равен размера массива
-чтобы не проверять, можно вместо [] использовать методы:
-.clipAt(index)
-.wrapAt(index)
-.foldAt(index)
-
-
-rotate(n: 1) // перестановка элементов в массиве
-
-.reshape( ... shape) //
-
-.windex //Interprets the array as a list of probabilities which should sum to 1.0 and returns a random index value based on those probabilities.
-
-
-
-==============================================
-итеграция в VS code
-==============================================
-/*
-vscode-supercollider (originally developed by scztt and maintained via community contributors). It uses the Language Server Protocol (LSP) to communicate directly with SuperCollider (sclang).
-
-
-FluCoMa Gerard Roma
-*/
