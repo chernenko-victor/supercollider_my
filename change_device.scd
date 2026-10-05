@@ -24,7 +24,10 @@ ServerOptions.inDevices; // входные
 o = Server.default.options; // or simply o = s.options;
 
 // переключить устройство
-o.outDevice_("Windows WASAPI : CABLE Input (VB-Audio Virtual Cable)");
+o.outDevice_("Windows WASAPI : CABLE Input (VB-Audio Virtual
+Cable)");
+
+o.outDevice_("ASIO : ReaRoute ASIO (x64)");
 
 o.outDevice = nil;
 

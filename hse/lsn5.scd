@@ -1,5 +1,20 @@
-SCLOrkSynths.gui; // загружаем библиотеку
+SCLOrkSynths.gui; // загружаем библиотеку  и сервер
 
+s.plotTree; // окно для отображения экземпляров синтов
+
+
+так тоже можно, но не получится использовать в паттернах
+(
+{
+	LFTri.ar() * 0.2;
+}.play;
+)
+
+// угадайте какой будет результат в supercilloder ))
+1 + 2 * 3
+
+
+надо для арифм. операций расставлять все скобки
 (
 {
 	arg freq = 440, amp = 0.4; // два входа
@@ -15,6 +30,29 @@ SCLOrkSynths.gui; // загружаем библиотеку
 	);
 }.asSynthDef(fadeTime: 0.1, name: \sin_synth_proto).add;
 )
+
+~sin_synth1 = Synth(\sin_synth_proto);
+~sin_synth1.set(\freq, 330);
+~sin_synth1.set(\amp, 0.2);
+~sin_synth1.release(0.3);
+
+~clk1 = TempoClock.new(120/60);
+
+~clk1.beats;
+
+(
+~clk1.sched(0, {
+	var next_start = rrand(0.005, 0.01);
+	~sin_synth1.release(0.03);
+	~sin_synth1 = Synth(\sin_synth_proto, args: [\freq, 200 + 200.rand]
+	);
+
+	next_start;
+});
+)
+
+
+
 
 ======================================================
                   вложенные паттерны III
@@ -84,6 +122,8 @@ Pbindef(
                   Типы движения
 =======================================================
 
+(1, 3..14)
+
 1. Монотонное в одну сторону. Когда доходит до конца, начинается снова
 
 Pbindef(\prophet5pwmStrings).clear;
@@ -112,7 +152,7 @@ Pbindef(\prophet5pwmStrings).clear;
 (
 Pbindef(\prophet5pwmStrings,
 	\instrument, "prophet5pwmStrings",
-	\note, Pwalk((12..1), stepPattern: Pser([1, 2], inf), directionPattern: 1).trace,
+	\note, Pwalk((12..1), stepPattern: Pser([1, 2, 2], inf), directionPattern: 1).trace,
 	\ctranspose, -12,
 	\amp, 0.1,
 	\dur, Pseq([Pn(0.5, 8), Pn(0.25, 8), Pn(0.125, 16)], 1),
@@ -333,6 +373,8 @@ Pbindef(\prophet5pwmStrings,
 );
 )
 
+
+2.pow(1/12)
 
 // попробуем множитель 2.pow(1/12)
 (
@@ -665,7 +707,16 @@ FreqScope.new;
 
 
 
+
+
 // WhiteNoise, PinkNoise, BrownNoise - noise generators with different spectra
+
+(
+{
+	LFNoise1.ar(4).pow(2) * 0.2;
+}.plot(5);
+)
+
 
 
 // synths definition
