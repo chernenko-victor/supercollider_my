@@ -1,6 +1,3 @@
-lsn6_181025.scd
-
-
 // synths definition
 (
 {
@@ -11,9 +8,19 @@ lsn6_181025.scd
 	(SinOsc.ar(freq * 3 * LFNoise2.kr(0.7).range(0.99, 1.01)) / 3) +
 	(SinOsc.ar(freq * 4 * LFNoise2.kr(0.7).range(0.99, 1.01)) / 4);
 	sig = amp * sig / 4;
-	[sig, sig];
+	[sig, sig]; // 2 channel
 }.asSynthDef(fadeTime: 0.1, name: \sin_sum_proto).add;
+)
 
+(
+{
+	SinOsc.ar(
+		5 * LFNoise2.kr(2).range(0.5, 1.5) // frequency modulation
+	);
+}.plot(5);
+)
+
+(
 {
 	arg freq, amp;
 	var sig;
@@ -37,8 +44,8 @@ Synth(\var_saw_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
 
 (
 10.do({
-	arg ...args_arr;
-	args_arr.postln;
+	arg i;
+	i.postln;
 })
 )
 
@@ -46,7 +53,7 @@ Synth(\var_saw_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
 (
 {
 	arg freq, amp;
-	var sig = 0, harm_num = 10; // формальное начальное значение
+	var sig = 0, harm_num = 10;
 
 	harm_num.do({
 	    arg ...args_arr;
@@ -65,7 +72,7 @@ Synth(\var_saw_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
 }.asSynthDef(fadeTime: 0.1, name: \sin_sum_loop__proto).add;
 )
 
-~sin_sum_loop1 = Synth(\sin_sum_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
+~sin_sum_loop1 = Synth(\sin_sum_loop__proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
 
 ~sin_sum_loop1.release(0.2);
 
@@ -76,7 +83,7 @@ Synth(\var_saw_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
 ~voice_num.do({
 	arg ...args_arr;
 	// args_arr.postln;
-	~notes_arr[args_arr[0]] = Synth(\sin_sum_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
+	~notes_arr[args_arr[0]] = Synth(\sin_sum_loop__proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
 })
 )
 
@@ -97,14 +104,78 @@ Synth(\var_saw_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
 List[1, 10, 100].class; // Вернет: List
 
 
-~arr1 = [1, 10, 100];
+// не надо добавлять элементы к созданному массиву
+~arr1 = [1, 10, 100]; // в консоли [1, 10, 100]
+~arr1.postln; // в консоли [1, 10, 100]
+~arr1.add(1000); // в консоли [1, 10, 100, 1000]
+~arr1.postln; // в консоли [1, 10, 100, 1000] Array увеличивается
+~arr1.add(1000); // в консоли  [1, 10, 100, 1000, 1000]
+~arr1.postln; // в консоли [1, 10, 100, 1000] Array теперь не увеличился
+
+
 (
-~arr1.do({
-	arg ...args_arr;
-	args_arr.postln;
+5.do({ // число тоже iterable
+	~arr1.add(100.rand).postln; // в консоли  [1, 10, 100, 1000, <random>]
+	~arr1.postln; // в консоли [1, 10, 100, 1000] Array теперь не увеличился
+})
+)
+
+Чтобы добавить элементов, надо использовать список
+
+~list1 = List[1, 1.5, 3, Rest(1)];
+
+(
+5.do({
+	var dur = (15.rand / 10) + 0.125;
+	if(
+		[false, false, true].choose,
+		{dur = Rest(dur)}
+	);
+	~list1.add(dur).postln;
+})
+)
+
+(
+Pbindef(\test_list,
+	\dur, Pser([1, 1.5, 3, Rest(1)], inf)
+).play;
+)
+
+(
+Pbindef(\test_list,
+	\dur, Pser(~list1, inf)
+);
+)
+
+Pbindef(\test_list).stop;
+
+
+~list1.asArray.class;
+~arr1.asList.class;
+
+
+
+Индекс всегда целый
+(
+5.1.do({
+	arg i;
+	i.postln;
 });
 )
 
+С переменным шагом
+forBy (0, 2, 0.5) { |value| value.postln };
+
+
+Массив итерабельный
+(
+~arr1.do({
+	arg ...args_arr; // все аргументы упакует в массив, удобно когда не знаешь перечень аргументов
+	args_arr.postln; // [value, index]
+});
+)
+
+Заполнение массива с помощью функции
 (
 ~midi_seq_arr = Array.fill(10, {
 	arg i;
@@ -116,12 +187,87 @@ List[1, 10, 100].class; // Вернет: List
 Pdef(
 	\add_synth_percussion__play,
 	Pbind(
-		\instrument, \add_synth_percussion_proto,
+		\instrument, \var_saw_proto,
 		\midinote, Pseq(~midi_seq_arr, 1),
 	)
 ).quant_(1).play;
 )
 
+
+Переменное число обертонов
+
+(
+{
+	arg
+	  freq = 440,
+	  amp = 0.2,
+	  freqs_ratio_arr = #[1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] // #[1, 2, 3, 4] - фиксированный массив
+	;
+	var sig = 0;
+
+	freqs_ratio_arr.do({
+	    // arg ...args_arr; // не работает в синте
+		arg ratio;
+		/*
+		// не работает в синте
+		if(
+			args_arr[0] > 0,
+			{	nil; }
+		);
+		*/
+		var is_positive = ratio > 0; // а это работает ))
+
+
+		sig =  sig + ((
+					SinOsc.ar(
+						freq *
+						(ratio + 1) *
+						LFNoise2.kr(0.7).range(0.99, 1.01)
+					) / (ratio + 1)
+		) * is_positive); // Если ratio <= 0, сигнал умножится на 0 и сотрется
+    });
+
+	sig = amp * sig / freqs_ratio_arr.size;
+	[sig, sig];
+}.asSynthDef(fadeTime: 0.1, name: \sin_sum_loop_var__proto).add;
+)
+
+FreqScope.new;
+
+~my_saw = Synth(\sin_sum_loop_var__proto);
+~my_saw.release();
+
+
+(
+~my_square = Synth(\sin_sum_loop_var__proto, args: [
+	\freqs_ratio_arr, [1, 3, 5, 7, 9, 11]
+]);
+)
+~my_square.release();
+
+
+(
+~non_harm_arr = Array.fill(7, {
+	arg i;
+	i + 1 + (rrand(0, 10) / 15);
+});
+)
+
+(
+~my_drone = Synth(\sin_sum_loop_var__proto, args: [
+	\freqs_ratio_arr, ~non_harm_arr
+]);
+)
+
+
+
+~my_drone.set(\amp, 0.7);
+~my_drone.set(\freq, rrand(1, 12) / rrand(2, 5) * 110);
+~my_drone.release();
+
+
+
+=====================================================
 
 Субстрактивный синтез
 (
@@ -163,6 +309,7 @@ Pdefn(
 
 {~midi_seq_arr.choose}.dup(1000).histo.plot;
 
+Pdef(\substr_example__play).stop;
 
 
 //////////////////////////////////////////////////
@@ -199,8 +346,6 @@ Pdefn(
 // lets make TempoClock.sched to turn on/ off patterns
 ...
 ...
-
-
 
 
 
