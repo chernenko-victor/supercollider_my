@@ -500,6 +500,8 @@ Env.adsr(
 }.plot(0.2);
 )
 
+s.plotTree;
+
 ~noise = Synth(\noise__proto); // try
 
 
@@ -620,6 +622,35 @@ Pbind(
                   вложенные паттерны III
 =======================================================
 
+(
+SynthDef(\idmPerc, { |out = 0, amp = 0.1, pan = 0, freq = 800, sustain = 0.05, noiseMix = 0.5|
+    var env, sig, noise;
+    env = EnvGen.ar(Env.perc(0.001, sustain, curve: -8), doneAction: 2);
+
+    // Смешиваем чистый тон и отфильтрованный белый шум
+    noise = BPF.ar(WhiteNoise.ar, freq * 1.5, 0.3);
+    sig = SinOsc.ar(freq) * (1 - noiseMix) + (noise * noiseMix);
+
+    sig = sig * env * amp;
+    Out.ar(out, Pan2.ar(sig, pan));
+}).add;
+
+{
+	arg freq = 440, amp = 0.4; // два входа
+	var sig = SinOsc.ar(freq) * amp; // меняем амплитуду
+	// добавляем гармоники
+	sig = sig + (SinOsc.ar(2 *freq) * amp/2);
+	sig = sig + (SinOsc.ar(3 *freq) * amp/3);
+	sig = sig + (SinOsc.ar(4 *freq) * amp/4);
+	sig.scope;
+	Limiter.ar( // на всяк случай лимитируем выход по -0.4 dB
+		sig, // входной сигнал
+		level: dbamp(-0.4) // переводми децибелы в rms
+	);
+}.asSynthDef(fadeTime: 0.1, name: \sin_synth_proto).add;
+
+SCLOrkSynths.gui; // загружаем библиотеку
+)
 
 (
 ~rand_seq = Pxrand(
@@ -633,6 +664,22 @@ Pbind(
 			\instrument, \default,
 			\freq, Pser([1, 2, 3] * 440, inf).trace,
 			\dur, Pser([1, 2, 3] * 0.25, 4)
+		),
+		Pbind(
+			\instrument, \idmPerc,
+			\dur, Pseq([
+				Prand([0.125, 0.25], 4), // Быстрые глитчи
+				Pseq([0.125, 0.125], 1),
+				Prand([0.5, 0.25], 2)    // Сбивки
+			], 12),
+			// Прыгающие частоты в верхнем регистре
+			\freq, Pwhite(1000, 8000),
+			// Случайное соотношение синуса и шума для каждого клика
+			\noiseMix, Pwhite(0.2, 0.9),
+			\sustain, Pwhite(0.01, 0.08),
+			// Панорама: звуки прыгают из левого уха в правое
+			\pan, Pwhite(-0.8, 0.8),
+			\amp, Pexprand(0.03, 0.15)
 		),
 		Pbindef( \feedbackPad3,
 			\instrument, "feedbackPad3",
@@ -701,7 +748,7 @@ Pdef(\test_ptrn_pl,
 		\dur, Prand((1 .. 6) * 0.25, inf),
 		\strum, Pwhite(0.05, 0.5, inf),
 		\legato, Pexprand(0.1, 1, inf),
-		// \instrument, \cheappiano,
+		\instrument, Pser([Pn(\default, 10), Pn(\feedbackPad3, 10), Pn(\idmPerc, 50)], inf),
 		\scale, Scale.choose,
 		\amp, Pexprand(0.001, 0.3, inf),
 	).trace
@@ -735,17 +782,17 @@ Pdef(\test_ptrn_pl).stop;
 (
 ~metro_part2 = TempoClock.new(2); // metronome for "drum2_part" to 2 beat per second (PBS)
 
-~metro_form.sched(30, {
+~form_clck.sched(30, {
 	"Start B".postln;
 	// after 30 beats from begin
 
 	// start part2
 	~drum2_part = Pbind(
-		\instrument, \oneclap_thor,
+		\instrument, "kickRingz",
 	).play(~metro_part2);
 });
 
-~metro_form.sched(90, {
+~form_clck.sched(90, {
 	~metro_form.stop;
 	~drum2_part.stop;
 	"End of piece".postln;
@@ -818,6 +865,7 @@ Pn(
 )
 
 Pbindef(\seq3).stop;
+Pdef(\ppolyrythm1).stop;
 
 
 
@@ -859,6 +907,9 @@ q.value;
 
 управлять синтезатором который работает в pattern
 надо в шину направлять
+
+1. Создаем синт \pattMidi
+
 
 // 2. Создаем шину для управления (например, для частоты среза фильтра)
 ~cutoffBus = Bus.control(s, 1);
