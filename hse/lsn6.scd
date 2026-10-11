@@ -1,14 +1,16 @@
 // synths definition
 (
 {
-	arg freq, amp;
+	arg freq, amp; // входы
 	var sig;
 	sig = SinOsc.ar(freq * LFNoise2.kr(0.7).range(0.99, 1.01)) +
 	(SinOsc.ar(freq * 2 * LFNoise2.kr(0.7).range(0.99, 1.01)) / 2) +
 	(SinOsc.ar(freq * 3 * LFNoise2.kr(0.7).range(0.99, 1.01)) / 3) +
 	(SinOsc.ar(freq * 4 * LFNoise2.kr(0.7).range(0.99, 1.01)) / 4);
 	sig = amp * sig / 4;
-	[sig, sig]; // 2 channel
+	[sig, sig]; // выход на 2 канала с помощью массива из 2-х элементов
+	// collider сам правильно оформит выход с помощью послыла на выход звуковой карты
+	// нам не нужно это делать в явном виде, так же как не надо делать Env с doneAction: 2 см. ниже что это
 }.asSynthDef(fadeTime: 0.1, name: \sin_sum_proto).add;
 )
 
@@ -17,39 +19,37 @@
 	SinOsc.ar(
 		5 * LFNoise2.kr(2).range(0.5, 1.5) // frequency modulation
 	);
-}.plot(5);
+}.scope(); // динамическое отображение формы волны
 )
 
 (
 {
-	arg freq, amp;
-	var sig;
-	sig = VarSaw.ar(
-		freq,
-		width: LFNoise2.kr(3.1).range(0.3, 0.68),
-    );
-	sig = amp * sig;
-	[sig, sig];
-}.asSynthDef(fadeTime: 0.1, name: \var_saw_proto).add;
+	SinOsc.ar(
+		5 * LFNoise2.kr(2).range(0.5, 1.5) // frequency modulation
+	);
+}.plot(5); // можно строить форму волны генератора
 )
 
-Synth(\sin_sum_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
-Synth(\var_saw_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
+~sin_sum1 = Synth(\sin_sum_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]); // запуск эземпляра синта
+~sin_sum1.release(); // корректное выключение с огибающей
 
 
 ===================================================
                      циклы (loops)
 ===================================================
 
-
+// десять раз выполнить функцию
+// функция передается в do как аргумент
+// collider на каждом шаге передает внутрь функции разные параметры
+// в данном случае это просто индекс
 (
 10.do({
-	arg i;
-	i.postln;
+	arg ...args_arr;
+	args_arr.postln;
 })
 )
 
-
+// чтобы не копировать гармоники вручную
 (
 {
 	arg freq, amp;
@@ -57,7 +57,7 @@ Synth(\var_saw_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
 
 	harm_num.do({
 	    arg ...args_arr;
-	    // args_arr.postln;
+	    // args_arr[0] содержит индекс
 		sig =  sig + (
 			SinOsc.ar(
 				freq *
@@ -76,32 +76,71 @@ Synth(\var_saw_proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
 
 ~sin_sum_loop1.release(0.2);
 
+// к сожалению, нельзя сделать harm_num параметром и создавать экземпляры с разным кол-вом обертонов
+
+// вернее, можно, но ... см. ниже
+
+
 (
-~voice_num = rrand(1, 4);
-~notes_arr = Array.newClear(~voice_num);
+~voice_num = rrand(1, 4); // кол-во голосов
+~notes_arr = Array.newClear(~voice_num); // массив
 
 ~voice_num.do({
 	arg ...args_arr;
-	// args_arr.postln;
+	// сохраним экземпляры синтов в массив
 	~notes_arr[args_arr[0]] = Synth(\sin_sum_loop__proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
 })
 )
 
+// выключим все экземплары
 (
 ~voice_num.do({
 	arg ...args_arr;
-	// args_arr.postln;
 	~notes_arr[args_arr[0]].release(0.2);
 })
 )
 
 
-///////////////////////////
+//////////////////////////////////////////////////////
+
 // "iterable" data types
+//
+// итерируемый типы данных - такие, которые можно обойти элемент за элементом
+//
+
+Характерный пример - массив (и его разновидность - список)
 
 [1, 10, 100].class;     // Вернет: Array
 
 List[1, 10, 100].class; // Вернет: List
+
+Элементы можно перечислить внутри квадратных скобок через запятую.
+
+~notes_arr = [60, 62, 64, 58];
+
+Или сделать пустой массив определенной длины ~midi_arr = Array.newClear(4);
+
+Сохранить элемент в массив ~midi_arr[0] = 48;
+
+Индексация элементов начинается с 0
+
+Имя переменной в данном случае указывает на начало массива в памяти компьютера.
+
+номер                                 Доступ к элементам
+ячйеки                                массива
+памяти
+0          |_____________________|
+1          |_____________________|
+2          |_____________________|
+3          |_________60__________|    ~notes_arr[0]
+4          |_________62__________|    ~notes_arr[1]
+5          |_________64__________|    ~notes_arr[2]
+6          |_________58__________|    ~notes_arr[3]
+7          |_____________________|
+8          |_____________________|
+............................................
+............................................
+............................................
 
 
 // не надо добавлять элементы к созданному массиву
@@ -112,6 +151,109 @@ List[1, 10, 100].class; // Вернет: List
 ~arr1.add(1000); // в консоли  [1, 10, 100, 1000, 1000]
 ~arr1.postln; // в консоли [1, 10, 100, 1000] Array теперь не увеличился
 
+
+// arg ...args_arr;
+// так пишут, чтобы все входные аргументы функции собрать в один массив.
+
+
+(
+~var_args_func = {
+	arg ...args_arr;
+	args_arr.postln;
+};
+)
+~var_args_func.(1);
+~var_args_func.(1, inf, -0.085, \put_it_to_arr);
+~var_args_func.(1, inf, -0.085, ["lets", "send", "an", "array"]);
+
+Можно использовать в функции переменное число аргументов.
+
+
+Collider часто автоматически пересылает аргументы в функцию.
+
+Например, метроном:
+(
+~clk1 = TempoClock(1);
+
+~clk1.sched(0, {
+	arg ...args_arr;
+	args_arr[0].postln; // колладйер пересылает в функцию номер бита, абсолютное время и ссылку на экземпляр метронома каждый раз, когда срабатывает метод sched. Время следующего срабатывания задает число в последней строке функции.
+
+	// на каждой 4 доле
+	if(
+		(args_arr[0] % 4) == 0.0,
+		{
+
+			~sin_sum_loop1 = Synth(\sin_sum_loop__proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
+		},
+		{ // на другой доле выключим
+			~sin_sum_loop1.release(0.2);
+		}
+	);
+
+	// через 9 долей дадим аккорд
+	if(
+		args_arr[0] == 9,
+		{
+			~voice_num = rrand(1, 4);
+			~notes_arr = Array.newClear(~voice_num);
+
+			~voice_num.do({
+				arg ...args_arr;
+				// args_arr.postln;
+				~notes_arr[args_arr[0]] = Synth(\sin_sum_loop__proto, args: [\freq, (220 + 220.rand), \amp, 0.4]);
+			});
+		}
+	);
+
+	// включим паттерн
+	if(
+		args_arr[0] == 7,
+		{
+			~bind1 = Pbind(
+				\amp, 0.5,
+			).play;
+		}
+	);
+
+	// выключим паттерн
+	if(
+		args_arr[0] == 19,
+		{
+			~bind1.stop;
+		}
+	);
+
+	// выключим всё остальное
+	// и сам метроном
+	if(
+		args_arr[0] == 25,
+		{
+			~clk1.stop;
+			(
+				~voice_num.do({
+					arg ...args_arr;
+					~notes_arr[args_arr[0]].release(0.2);
+				})
+			);
+		}
+	);
+
+	1;
+});
+)
+
+
+
+// посмотрим, что передается в функцию при обходе массива
+(
+~arr1 = [1, 10, 100];
+
+~arr1.do({
+	arg ...args_arr;
+	args_arr.postln;
+})
+)
 
 (
 5.do({ // число тоже iterable
@@ -163,17 +305,9 @@ Pbindef(\test_list).stop;
 });
 )
 
-С переменным шагом
+Если надо выполнять функцию с переменным шагом
 forBy (0, 2, 0.5) { |value| value.postln };
 
-
-Массив итерабельный
-(
-~arr1.do({
-	arg ...args_arr; // все аргументы упакует в массив, удобно когда не знаешь перечень аргументов
-	args_arr.postln; // [value, index]
-});
-)
 
 Заполнение массива с помощью функции
 (
@@ -194,20 +328,20 @@ Pdef(
 )
 
 
-Переменное число обертонов
+Переменное число обертонов. Можно сделать, но код получается не слишком понятным.
 
 (
 {
 	arg
 	  freq = 440,
 	  amp = 0.2,
-	  freqs_ratio_arr = #[1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] // #[1, 2, 3, 4] - фиксированный массив
+	  freqs_ratio_arr = #[1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] // #[1, 2, 3, 4] - фиксированный массив: сервер должен заранее знать длину массива
 	;
 	var sig = 0;
 
 	freqs_ratio_arr.do({
-	    // arg ...args_arr; // не работает в синте
-		arg ratio;
+	    // arg ...args_arr; // не работает в синте, массивы должны быть фиксированной длины
+		arg ratio; // берем только значение
 		/*
 		// не работает в синте
 		if(
@@ -272,7 +406,7 @@ FreqScope.new;
 Субстрактивный синтез
 (
 {
-	arg freq;
+	arg freq = 440, amp = 0.2;
 	10* Mix.fill(5, {
 		arg i;
 		Resonz.ar(
@@ -280,10 +414,23 @@ FreqScope.new;
 			freq * (i + 1),
 			bwr: 0.01,
 		)
-	});
+	}) * amp;
 }.asSynthDef(fadeTime: 0.3, name: \substr_example__proto).add;
 )
 
+~substr_example1 = Synth(\substr_example__proto);
+~substr_example1.release();
+
+(
+Pdef(
+	\substr_example__play,
+	Pbind(
+		\instrument, \substr_example__proto,
+	)
+).quant_(1).play;
+)
+
+Pdef(\substr_example__play).stop;
 
 (
 Pdef(
@@ -291,7 +438,7 @@ Pdef(
 	Pbind(
 		\instrument, \substr_example__proto,
 		\midinote, Pdefn(
-			\substr_example_at_midinote, Pseq(~midi_seq_arr, inf)
+			\substr_example_at_midinote, Pseq(~notes_arr, inf)
 		).trace,
 		\dur, Pdefn(\substr_example_at_dur, 0.5),
 	)
@@ -302,7 +449,7 @@ Pdef(
 Pdefn(
 	\substr_example_at_midinote,
 	Pfunc({
-			~midi_seq_arr.choose;
+			~notes_arr.choose;
 		})
 )
 )
@@ -403,7 +550,7 @@ Plprand(0, 7, inf).asStream.nextN(1000).histo.plot;
 (
 ~plot_2_graph.(
 	Pwhite(0, 7, inf).asStream.nextN(1000).histo,
-	Plprand(0, 7, inf).asStream.nextN(1000).histo
+	Phprand(0, 7, inf).asStream.nextN(1000).histo
 );
 )
 
@@ -439,7 +586,6 @@ Pgauss(4, 1, inf).asStream.nextN(1000).histo.plot;
 );
 )
 
-
 Pexprand(0.01, 7.0, inf).asStream.nextN(1000).histo.plot;
 
 
@@ -474,7 +620,7 @@ Env.perc(
 Env.adsr(
 		attackTime: 0.1,
 		releaseTime: 0.1,
-		curve: 3.0
+		curve: 5
 	).plot;
 )
 
@@ -488,6 +634,22 @@ Env.adsr(
 	).kr(doneAction: 2); // kr(doneAction: 2) turns Envelope on and off correctly
 }.asSynthDef(name: \noise__proto).add; // no need for fadeTime
 )
+
+Synth(\noise__proto, args: [\attk, rrand(0.05, 0.1), \rel, 1]);
+
+
+(
+{
+	arg attk = 0.05, rel = 0.1;
+	var env_amp = Env.perc(
+		attackTime: attk,
+		releaseTime: rel
+	).kr(doneAction: 2);
+	SinOsc.ar(440 * env_amp) * env_amp; // kr(doneAction: 2) turns Envelope on and off correctly
+}.asSynthDef(name: \sin_var__proto).add; // no need for fadeTime
+)
+
+Synth(\sin_var__proto, args: [\attk, rrand(0.05, 0.1), \rel, 1]);
 
 // see waveform
 (
@@ -966,6 +1128,8 @@ MIDIFunc.cc({ |val, num, chan, src|
 	sig = Limiter.ar(in: sig, level: dbamp(-0.4));
 }.asSynthDef(fadeTime: 0.2, name: \self_trig__proto).add;
 )
+
+Resonz
 
 ~self_trig1 = Synth(\self_trig__proto);
 ~self_trig1.release(0.3);

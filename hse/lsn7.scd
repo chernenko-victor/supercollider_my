@@ -1,3 +1,649 @@
+// ==========================================
+//             types of musical texture
+//             типы музыкальной фактуры
+// ==========================================
+
+// melody
+(
+Pbind(
+	// \instrument, \var_saw_proto,
+	\degree, Prand((0..8), inf),
+	\amp, Pwhite(0.05, 0.5, inf),
+	\dur, Prand(((1..6) ++ [Rest(2), Rest(4)]) * 0.25, inf),
+).play;
+)
+
+// accords
+(
+Pbind(
+	// \instrument, \sin_sum_proto,
+	// \degree, Prand((0..8), inf).clump(3),
+	\degree, Ptuple([
+		Prand((-3..4), inf),
+		Pseq([5, 7, 8], inf),
+		Prand((8..12), inf),
+	], inf),
+	\amp, Pwhite(0.05, 0.5, inf),
+	\dur, Prand(([2, 4, 6] ++ [Rest(2)]), inf),
+).play;
+)
+
+// line movement
+(
+Pbind(
+	// \instrument, \var_saw_proto,
+	\note, Pwalk((1..12), 1, 1, 7).trace, // chromatic movement, up direction
+	// \note, Pwalk((1..12), 1, Pseq([-1, 1], inf), 7), // up-down direction
+	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Pseq([-1, 1], inf), 7).trace, // step variation
+	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Prand([-1, 1], inf), 7).trace, // random direction
+	\amp, Pwalk((1..8) * 0.1, 1, Prand([-1, 1]), 3),
+	\dur, 0.25,
+).play;
+)
+
+
+
+======================================================
+                  вложенные паттерны III
+=======================================================
+
+(
+SynthDef(\idmPerc, { |out = 0, amp = 0.1, pan = 0, freq = 800, sustain = 0.05, noiseMix = 0.5|
+    var env, sig, noise;
+    env = EnvGen.ar(Env.perc(0.001, sustain, curve: -8), doneAction: 2);
+
+    // Смешиваем чистый тон и отфильтрованный белый шум
+    noise = BPF.ar(WhiteNoise.ar, freq * 1.5, 0.3);
+    sig = SinOsc.ar(freq) * (1 - noiseMix) + (noise * noiseMix);
+
+    sig = sig * env * amp;
+    Out.ar(out, Pan2.ar(sig, pan));
+}).add;
+
+{
+	arg freq = 440, amp = 0.4; // два входа
+	var sig = SinOsc.ar(freq) * amp; // меняем амплитуду
+	// добавляем гармоники
+	sig = sig + (SinOsc.ar(2 *freq) * amp/2);
+	sig = sig + (SinOsc.ar(3 *freq) * amp/3);
+	sig = sig + (SinOsc.ar(4 *freq) * amp/4);
+	sig.scope;
+	Limiter.ar( // на всяк случай лимитируем выход по -0.4 dB
+		sig, // входной сигнал
+		level: dbamp(-0.4) // переводми децибелы в rms
+	);
+}.asSynthDef(fadeTime: 0.1, name: \sin_synth_proto).add;
+
+SCLOrkSynths.gui; // загружаем библиотеку
+)
+
+(
+~rand_seq = Pxrand(
+	[
+		Pbind(
+			\instrument, \sin_synth_proto,
+			\freq, Pser([1, 2, 3] * 110, inf).trace,
+			\dur, Pser([1, 2, 3], 4)
+		),
+		Pbind(
+			\instrument, \default,
+			\freq, Pser([1, 2, 3] * 440, inf).trace,
+			\dur, Pser([1, 2, 3] * 0.25, 4)
+		),
+		Pbind(
+			\instrument, \idmPerc,
+			\dur, Pseq([
+				Prand([0.125, 0.25], 4), // Быстрые глитчи
+				Pseq([0.125, 0.125], 1),
+				Prand([0.5, 0.25], 2)    // Сбивки
+			], 12),
+			// Прыгающие частоты в верхнем регистре
+			\freq, Pwhite(1000, 8000),
+			// Случайное соотношение синуса и шума для каждого клика
+			\noiseMix, Pwhite(0.2, 0.9),
+			\sustain, Pwhite(0.01, 0.08),
+			// Панорама: звуки прыгают из левого уха в правое
+			\pan, Pwhite(-0.8, 0.8),
+			\amp, Pexprand(0.03, 0.15)
+		),
+		Pbindef( \feedbackPad3,
+			\instrument, "feedbackPad3",
+			\dur, 2,
+			\legato, 0.9,
+			\sampleRate, Pwhite(20.0, 25.0),
+			\midinote, Pseq([ // Welcome to the ocean!
+				[43, 47], [41, 48], [43, 47], [41, 48],
+				[43, 47], [41, 48], [41, 45], [39, 46],
+			])
+		),
+	],
+	10
+).play;
+)
+
+~rand_seq.stop;
+
+(
+~seq_of_seq = Pser(
+	[
+		Pbindef(
+			\seq1_in_prand,
+			\instrument, \sin_synth_proto,
+			\freq, Pser([1, 2, 3] * 110, inf).trace,
+			\dur, Pser([1, 2, 3], 4)
+		),
+		Pbindef(
+			\seq2_in_prand,
+			\instrument, \default,
+			\freq, Pser([1, 2, 3] * 440, inf).trace,
+			\dur, Pser([1, 2, 3] * 0.25, 4)
+		)
+	],
+	inf
+).play;
+)
+
+(
+Pbindef(
+	\seq1_in_prand,
+	\freq, Pser([3, 2, 1] * 110, inf).trace,
+)
+)
+
+~seq_of_seq.stop;
+
+
+//////////////////////////////
+//
+// legato, arpeggiato (strum)
+
+~test_clk = TempoClock.new(1);
+~test_clk.beats;
+
+(
+Pdef(\test_ptrn_pl,
+	Pbind(
+		\degree, Prand(
+			// [1, 3, 6, 8] + Prand([0, 1, 4], 1),
+			//([0, 0, 0, 0] + {rrand(1, 7)}),
+			//(1 .. 20).clump(4),
+			(1 .. 20).clump(4).lace(20).clump(4),
+			inf
+		),
+		\dur, Prand((1 .. 6) * 0.25, inf),
+		\strum, Pwhite(0.05, 0.5, inf),
+		\legato, Pexprand(0.1, 1, inf),
+		\instrument, Pser([Pn(\default, 10), Pn(\feedbackPad3, 10), Pn(\idmPerc, 50)], inf),
+		\scale, Scale.choose,
+		\amp, Pexprand(0.001, 0.3, inf),
+	).trace
+).play(~test_clk);
+)
+
+~test_clk.tempo = 0.3
+
+(
+Pdef(\test_ptrn_pl).stop;
+~test_clk.stop;
+)
+
+
+===================================================
+          Отложенный старт/ стоп
+===================================================
+
+
+~form_clck = TempoClock.new(1);
+
+// method "sched" of "TempoClock" object starts function after N seconds
+// TempoClock -> sched(N, { function })
+// If last string of function returns number M, function will be retarted after M seconds
+(
+~form_clck.sched(3, {
+	"bang".postln;
+});
+)
+
+(
+~metro_part2 = TempoClock.new(2); // metronome for "drum2_part" to 2 beat per second (PBS)
+
+~form_clck.sched(30, {
+	"Start B".postln;
+	// after 30 beats from begin
+
+	// start part2
+	~drum2_part = Pbind(
+		\instrument, "kickRingz",
+	).play(~metro_part2);
+});
+
+~form_clck.sched(90, {
+	~metro_form.stop;
+	~drum2_part.stop;
+	"End of piece".postln;
+});
+)
+
+
+Этот пример проигрывает ноты ровно 4 бита, а затем останавливается, даже если последовательность нот могла бы продолжаться дальше.
+
+~clck3 = TempoClock.new(120/60);
+
+(
+Pfindur(4,
+  Pbindef(
+	\seq3,
+	\instrument, "kick808",
+	\dur, Pseq(
+		[
+			1,
+				Pxrand([Rest(1/4), 1/2, 2/3, Rest(2/3)], 2),
+			1,
+			Prand([1, Rest(1/2), 2, Rest(1/4)], 1)
+		], inf).trace,
+	\amp, 0.4,
+	\rel, 0.7,
+	\dist, 0.5,
+  )
+).play(~clck3);
+)
+
+~clck3.tempo = 2;
+
+
+
+
+===================================================
+            паттерны разной длины
+            синхронизация каждый 4 бита
+===================================== =============
+
+(
+Pbindef(
+	\seq3,
+	\instrument, "kick808",
+	\dur, Pseq(
+		[
+				Pn(1, 3), Rest(1/4), 3/4, Pn(1, 3), Rest(1)
+		], inf).trace,
+	\amp, 0.4,
+	\rel, 0.7,
+	\dist, 0.5,
+).play(~clck3, quant: 1);
+
+Pdef(
+\ppolyrythm1,
+Pn(
+// Паттерн играет случайное количество нот длительностью 0.3 бита.
+// 0.3 не делится ровно на 1 или 4.
+  Psync(
+    Pbind(
+        \dur, 0.3,
+        \note, Pseq([0, 2, 4, 7], 3) // Всего 12 нот по 0.3 = 3.6 бита
+    ),
+    quant: 1.0, // Округлить общую длительность до целого бита
+    maxdur: 4.0 // Но не дольше 4 битов
+  ),
+  inf
+)
+).play(~clck3);
+)
+
+Pbindef(\seq3).stop;
+Pdef(\ppolyrythm1).stop;
+
+
+
+===================================================
+            MIDI In
+===================================================
+
+(
+var notes, on, off;
+
+MIDIClient.init;
+MIDIIn.connectAll;
+
+notes = Array.newClear(128);    // array has one slot per possible MIDI note
+
+on = MIDIFunc.noteOn({ |veloc, num, chan, src|
+    notes[num] = Synth(\default, [\freq, num.midicps,
+        \amp, veloc * 0.00315]);
+});
+
+off = MIDIFunc.noteOff({ |veloc, num, chan, src|
+    notes[num].release;
+});
+
+q = { on.free; off.free; };
+)
+
+(
+~cc1 = MIDIFunc.cc({|val, ccNum, chan, src|
+    val.postln; //this totally works!
+    // ~synth.set(\cc1, val / 127);
+}, ccNum:1);
+)
+
+// when done:
+q.value;
+
+
+
+управлять синтезатором который работает в pattern
+надо в шину направлять
+
+1. Создаем синт \pattMidi
+
+
+// 2. Создаем шину для управления (например, для частоты среза фильтра)
+~cutoffBus = Bus.control(s, 1);
+~cutoffBus.set(800); // начальное значение
+
+// 3. Создаем MIDIFunc для чтения CC-сообщений
+// Замените ccNum на номер вашей ручки/ползунка на MIDI-контроллере
+MIDIFunc.cc({ |val, num, chan, src|
+    // Масштабируем значение MIDI (0-127) в диапазон частоты фильтра (200 - 10000 Гц)
+    var freq = val.linexp(0, 127, 200, 10000);
+    ~cutoffBus.set(freq);
+}, ccNum: 1); // 1 — это обычно колесо модуляции (ModWheel)
+
+
+~pattern = Pbind(
+    \instrument, \pattMidi,
+    \dur, 0.25,
+    \degree, Pseq([0, 2, 4, 7, 4, 2], inf),
+    // Привязываем аргумент синтезатора к нашей MIDI-шине:
+    \fftCutoff, ~cutoffBus.asMap,
+    \amp, 0.15
+).play;
+
+
+=======================================================
+           LFO
+=======================================================
+
+(
+{
+	// arg freq =440, amp = 0.2;
+	var
+	  sig,
+	  pulse_witdth,
+	  amp_env,
+	  duration = 0.5,
+	  freq =440,
+	  amp = 0.2
+	;
+
+	freq = LFNoise0.kr(1).range(1, 10).ceil / (LFNoise0.kr(0.72).range(2, 6).ceil) * 440;
+
+	duration = LFNoise0.kr(0.25).range(1, 10).ceil * 0.25;
+
+	pulse_witdth = LFNoise2.kr(0.3).range(0.2, 1.5);
+	amp_env = SinOsc.kr(freq: duration);
+	// amp_env = LFSaw.kr(freq: 0.1).poll;
+	sig = LFPulse.ar(
+		freq: freq,
+		iphase: 0,
+		width: (0.5 * pulse_witdth).poll
+	) * amp_env * amp;
+
+	sig = Limiter.ar(in: sig, level: dbamp(-0.4));
+}.asSynthDef(fadeTime: 0.2, name: \self_trig__proto).add;
+)
+
+Resonz
+
+~self_trig1 = Synth(\self_trig__proto);
+~self_trig1.release(0.3);
+
+//////////////////////////
+//
+// Exchange data between synth by Bus.control
+
+
+Changed
+
+(
+{
+    var changingSignal = LFNoise0.ar(1000);
+    var changed = Changed.ar(changingSignal);
+    [changingSignal, changed]
+}.plot
+);
+
+
+
+
+
+==============================================
+             Огибающие в паттернах
+==============================================
+(
+Pbind(
+    \note, Env(
+            levels: [0, 0.1, 0.2, 0.3] * 12,
+            times: [0.1, 0.1, 0.1] * 20,
+            curve: 8,
+		    loopNode: 1
+        ),
+    \dur, 0.1
+).play;
+)
+// не повторяется
+
+(
+Pbind(
+    \note, Pseg(Pseq([1, 5], inf), Pseq([4, 1], inf), \linear),
+    \dur, 0.1
+).play;
+)
+
+// это не работает, поскольку Pseg связан с таймером, а plot работает в своем режиме
+Pseg(Pseq([1, 5], inf), Pseq([4, 1], inf), \linear).asStream.nextN(10).plot("Pattern from random");
+
+
+================================================
+              Повторение
+================================================
+
+(
+Pdef(
+	\arithm,
+	Pbind(
+		\dur, Pclutch(
+			Prand(((1..5)**2*0.1) ++ Rest(1), inf),
+			0.7.coin.binaryValue
+		).trace,
+	),
+).stop;
+)
+
+
+~test_clk = TempoClock.new(1);
+~test_clk.beats;
+
+(
+Pdef(\test_ptrn_pl,
+	Pbind(
+		\degree, Prand(
+			// [1, 3, 6, 8] + Prand([0, 1, 4], 1),
+			//([0, 0, 0, 0] + {rrand(1, 7)}),
+			//(1 .. 20).clump(4),
+			(1 .. 20).clump(4).lace(20).clump(4),
+			inf
+		),
+		\dur, Prand((1 .. 6) * 0.25, inf),
+		\strum, Pwhite(0.05, 0.5, inf),
+		\legato, Pexprand(0.1, 1, inf),
+		// \instrument, \cheappiano,
+		\scale, Scale.choose,
+		\amp, Pexprand(0.001, 0.3, inf),
+	).trace
+).play(~test_clk);
+)
+
+~test_clk.tempo = 0.3
+
+(
+Pdef(\test_ptrn_pl).stop;
+~test_clk.stop;
+)
+
+=============================================
+         lace, clump
+=============================================
+
+x = [ [1, 2, 3], 6, List["foo", 'bar']];
+y = x.lace(12);
+x.postln;
+y.postln;
+
+-> [ [ 1, 2, 3 ], 6, List[ foo, bar ] ]
+-> [ 1, 6, foo, 2, 6, bar, 3, 6, foo, 1, 6, bar ]
+
+(1 .. 20).clump(4).lace(20).clump(4)
+
+
+
+
+//////////////////////////////////
+//
+//      discrete random distribution
+
+
+// we want 2nd and 5th number to have a higher probability
+~midi_seq1_arr = [1, 2, 4, 5, 7, 9];
+~midi_seq1_weigth_arr = [10, 20, 30, 10, 10, 30].normalizeSum;
+
+
+{~midi_seq1_arr.choose}.dup(1000).histo.plot; // equal discrete  distr
+
+{~midi_seq1_arr.wchoose(~midi_seq1_weigth_arr)}.dup(1000).histo.plot; // weighted discrete distr
+
+~midi_seq1_arr.scramble; // change elements which will appear more frequently
+
+
+//////////////////////////////////
+//
+//      markov chain
+
+// we want dictr that "remember" step before this
+// it's "contitional random"
+
+/*
+markov table
+
+   A   B   C   D
+A  10  20  30  10 // C appears after A more frequently then D
+B  10  10  20  30
+C  30  10  10  20
+D  20  30  10  10
+
+Values [A, B, C, D] are in an array. We want Markov process say us index of next elemet by index of current element.
+
+Markov process (MP) find current value in the vertical list, then takes its index. Then MP brings correspondent string - it becomes array of weigth. With "windex" function MP finds index of next element, it's like "wchoose" but returns an index itself.
+*/
+
+(
+~dur_arr = [1,   2,   4 ,  6] * 0.25; // our elements
+
+~curr_index = 0; // default value
+
+~markov_arr = [
+	[10,  20,  30,  10].normalizeSum,
+	[10,  10,  20,  30].normalizeSum,
+	[30,  10,  10,  20].normalizeSum,
+	[20,  30,  10,  10].normalizeSum
+];
+)
+
+(
+~curr_index = ~markov_arr[~curr_index].windex; // get next index and save it
+~dur_arr[~curr_index]; // get next elenemt by this index
+)
+
+
+(
+Pdef(
+	\fb_sin__player,
+	Pbind(
+		\instrument, \fb_sin__proto,
+		// \freq, Pser([1, 2, 4, 1] * 440, inf),
+		\degree, Pdefn(
+			\degree_at_fb_sin__player,
+			Pser([1, 2, 4, 1], inf)
+		),
+		\dur, Pfunc({
+			~curr_index = ~markov_arr[~curr_index].windex;
+			~dur_arr[~curr_index];
+		}),
+		\legato, 0.8,
+	)
+).play;
+)
+
+
+
+///////////////////////////////////////
+//
+//       feedback, chaos
+//
+////////////////////////////////////////
+
+// but for using in patterns we must make it synth
+(
+{
+	arg freq = 440; // inputs of synth
+	// we can send values from Pbind by arg's name
+	// for ex., \freq, 220,
+
+	var feedback_mod = LFNoise2.kr(1) * 1.9;
+	SinOscFB.ar(freq, 0.1 * 2 * 3.14 * feedback_mod ) * 0.2;
+}.asSynthDef(fadeTime: 0.1, name: \fb_sin__proto).add;
+)
+
+
+(
+// as a frequency control
+{ SinOsc.ar(
+	HenonC.ar(
+		4,
+		MouseX.kr(1, 1.4),
+		MouseY.kr(1, 0.3)
+	)*800+900
+)
+* 0.04 ! 2 }.scope();
+)
+
+LatoocarfianL
+
+(
+{
+HenonC.ar(
+		4,
+		MouseX.kr(1, 1.4),
+		MouseY.kr(1, 0.3)
+	);
+}.scope;
+)
+
+FBSineC
+
+{ SinOsc.ar(Lag.ar(LorenzL.ar(MouseX.kr(1, 200)), 3e-3)*800+900)*0.4 }.play(s);
+
+{ SinOsc.ar(StandardL.ar(40, MouseX.kr(0.9, 4))*800+900)*0.4 }.play(s);
+
+
+Logistic
+
+
+
+// ....
+
+
+
+
 //////////////////////////
 //
 // Change data between synth by OSC
