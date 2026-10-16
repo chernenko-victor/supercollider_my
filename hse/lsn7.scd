@@ -1,3 +1,200 @@
+===================================================
+            MIDI In
+===================================================
+
+(
+var notes, on, off;
+
+MIDIClient.init;
+MIDIIn.connectAll;
+
+notes = Array.newClear(128);    // array has one slot per possible MIDI note
+
+on = MIDIFunc.noteOn({ |veloc, num, chan, src|
+    notes[num] = Synth(\default, [\freq, num.midicps,
+        \amp, veloc * 0.00315]);
+});
+
+off = MIDIFunc.noteOff({ |veloc, num, chan, src|
+    notes[num].release;
+});
+
+q = { on.free; off.free; };
+)
+
+(
+~cc1 = MIDIFunc.cc({|val, ccNum, chan, src|
+    val.postln; //this totally works!
+    // ~synth.set(\cc1, val / 127);
+}, ccNum:1);
+)
+
+// when done:
+q.value;
+
+
+
+управлять синтезатором который работает в pattern
+надо в шину направлять
+
+1. Создаем синт \pattMidi
+
+
+// 2. Создаем шину для управления (например, для частоты среза фильтра)
+~cutoffBus = Bus.control(s, 1);
+~cutoffBus.set(800); // начальное значение
+
+// 3. Создаем MIDIFunc для чтения CC-сообщений
+// Замените ccNum на номер вашей ручки/ползунка на MIDI-контроллере
+MIDIFunc.cc({ |val, num, chan, src|
+    // Масштабируем значение MIDI (0-127) в диапазон частоты фильтра (200 - 10000 Гц)
+    var freq = val.linexp(0, 127, 200, 10000);
+    ~cutoffBus.set(freq);
+}, ccNum: 1); // 1 — это обычно колесо модуляции (ModWheel)
+
+
+~pattern = Pbind(
+    \instrument, \pattMidi,
+    \dur, 0.25,
+    \degree, Pseq([0, 2, 4, 7, 4, 2], inf),
+    // Привязываем аргумент синтезатора к нашей MIDI-шине:
+    \fftCutoff, ~cutoffBus.asMap,
+    \amp, 0.15
+).play;
+
+
+===============================================
+audio bus
+===============================================
+
+
+// Включаем финальную обработку
+(
+~master = Synth(\master_proto, [\in_bus, ~master_send]);
+)
+
+(
+SynthDef(\sin_fm, {
+	arg freq = 440, amp =0.2, feedback = 0.1;
+	var sig, env;
+	env = Env.perc().kr(doneAction: 2);
+	sig = SinOscFB.ar(freq: freq, feedback: feedback) * amp * env;
+	Out.ar(~master_send, [sig, sig]);
+}).add;
+)
+
+s.plotTree;
+
+~sin_fm1 = Synth(\sin_fm);
+
+===============================================
+
+семплы (sampling)
+
+===============================================
+
+(
+// Загружаем семпл в специальную область памяти - буфер (Buffer). Это одномерный массив чисел, индексы начинаются с 0/
+~buf1 = Buffer.read(s, "D:/audio/samples/pf/04-mic2-231205_1439.wav"); // Путь к файлу надо заменить
+~buf1.numChannels; //показывает кол-во каналов
+~buf1.play;
+
+~buf2_chnl1 = Buffer.readChannel(s, "D:/audio/music/chernenko/lyra8_230426_2.wav", channels: [0]);
+~buf2_chnl1.numChannels;
+~buf2_chnl1.play;
+
+~buf3_chnl1 = Buffer.readChannel(s, "D:/audio/samples/vocal/numbers.wav", channels: [0]);
+~buf3_chnl1.numChannels;
+~buf3_chnl1.play;
+
+
+~buf4_glitch_loops = Buffer.read(s, "C:/home/Admin/audio/44446__looplicator__glitch-loops-102025/830048__looplicator__128-bpm-industrial-glitch-loop-15441-wav.wav");
+~buf4_glitch_loops.numChannels;
+
+~buf5_rock_breakbeat = Buffer.read(s, "D:/audio/samples/perc/570888__kaypira_fp__drum-loop-120bpm-rock-breakbeat.wav");
+)
+
+~buf5_rock_breakbeat.play;
+
+
+///////////////////////////////////////////
+//         Подготовка к работе
+///////////////////////////////////////////
+
+// Надо запустить код из lib/fx.scd
+// lib/sample.scd
+
+// Включаем финальную обработку
+(
+~master = Synth(\master_proto, [\in_bus, ~master_send]);
+)
+
+
+////////////////////////////////////
+// BufRd - свободное управление скоростью и направлением воспроизведения
+(
+SynthDef(\player_var_speed_proto, {
+	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0, begin = 0, end = 1;
+	var out;
+	out = BufRd.ar(
+		2,
+		buf,
+		// LFNoise1.ar(1) * BufFrames.ir(buf)
+		// Варианты обхода буфера:
+		// SinOsc.ar(0.1, 0, 0.5, 0.5) * BufFrames.ir(buf) // последовательное изменение направления
+
+		(1-LFSaw.ar(BufDur.ir(buf).reciprocal)).
+		    range(BufFrames.ir(buf) * begin, BufFrames.ir(buf) * end)
+		// Обратное воспроизведение части семпла
+
+	);
+	Out.ar(
+		out_bus,
+		dbamp(master_send_lvl_db) * out
+	);
+}).add;
+)
+
+~buf1.play;
+
+~player_var_speed = Synth(\player_var_speed_proto, [\buf, ~buf1, \out_bus, ~master_send]);
+~player_var_speed.free;
+// , \begin, 0.3, \end, 0.7
+
+
+////////////////////////////////////////////////
+
+
+// ~granulator1 = Synth(\granulator_rate_ctrl_rec_1fx_send__proto, [\buf, ~buf2_chnl1, \out_bus, ~master_send]);
+
+(
+{
+	arg buf = 1000;
+	var trig, rate;
+	var raw = LFNoise2.kr(0.2).clip2(1);
+    var dur = Select.kr(raw > 0, [
+        raw.lincurve(-1, 0, 0.005, 0.05, 8),
+        raw.lincurve(0, 1, 3, 4, -8)
+    ]); // Контрастные длительности - или очень короткие, или длинные
+	rate = 1/dur;
+	// rate = ((LFNoise2.kr(0.3).exprange(0.01, 50))**(-1));
+
+	trig = Impulse.kr(
+		rate.poll
+	);
+
+	TGrains.ar(
+		numChannels: 2,
+		trigger: trig,
+		bufnum: buf,
+		centerPos: BufDur.kr(buf) * LFNoise2.kr(1).range(0.01, 0.99),
+		dur: BufDur.kr(buf) * 0.1,
+		amp: 1,
+	);
+}.play(args: [\buf, ~buf3_chnl1]);
+)
+
+
 // ==========================================
 //             types of musical texture
 //             типы музыкальной фактуры
@@ -28,12 +225,22 @@ Pbind(
 ).play;
 )
 
+
+(
+Pbind(
+	// \instrument, \var_saw_proto,
+	\degree, Prand((0..8), inf) - 14,
+	\amp, Pwhite(0.05, 0.5, inf),
+	\dur, Prand(((1..6) ++ [Rest(2), Rest(4)]) * 0.25, inf),
+).play;
+)
+
 // line movement
 (
 Pbind(
 	// \instrument, \var_saw_proto,
-	\note, Pwalk((1..12), 1, 1, 7).trace, // chromatic movement, up direction
-	// \note, Pwalk((1..12), 1, Pseq([-1, 1], inf), 7), // up-down direction
+	// \note, Pwalk((1..12), 1, 1, 7).trace, // chromatic movement, up direction
+	\note, Pwalk((1..12), 1, Pseq([-1, 1], inf), 7) + 14, // up-down direction
 	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Pseq([-1, 1], inf), 7).trace, // step variation
 	// \note, Pwalk((1..12), Pseq([1, 2, 2], inf), Prand([-1, 1], inf), 7).trace, // random direction
 	\amp, Pwalk((1..8) * 0.1, 1, Prand([-1, 1]), 3),
@@ -182,6 +389,8 @@ Pdef(\test_ptrn_pl,
 
 ~test_clk.tempo = 0.3
 
+~test_clk.tempo = 10;
+
 (
 Pdef(\test_ptrn_pl).stop;
 ~test_clk.stop;
@@ -225,7 +434,7 @@ Pdef(\test_ptrn_pl).stop;
 )
 
 
-Этот пример проигрывает ноты ровно 4 бита, а затем останавливается, даже если последовательность нот могла бы продолжаться дальше.
+Следующий пример проигрывает ноты ровно 4 бита, а затем останавливается, даже если последовательность нот могла бы продолжаться дальше.
 
 ~clck3 = TempoClock.new(120/60);
 
@@ -294,70 +503,6 @@ Pdef(\ppolyrythm1).stop;
 
 
 
-===================================================
-            MIDI In
-===================================================
-
-(
-var notes, on, off;
-
-MIDIClient.init;
-MIDIIn.connectAll;
-
-notes = Array.newClear(128);    // array has one slot per possible MIDI note
-
-on = MIDIFunc.noteOn({ |veloc, num, chan, src|
-    notes[num] = Synth(\default, [\freq, num.midicps,
-        \amp, veloc * 0.00315]);
-});
-
-off = MIDIFunc.noteOff({ |veloc, num, chan, src|
-    notes[num].release;
-});
-
-q = { on.free; off.free; };
-)
-
-(
-~cc1 = MIDIFunc.cc({|val, ccNum, chan, src|
-    val.postln; //this totally works!
-    // ~synth.set(\cc1, val / 127);
-}, ccNum:1);
-)
-
-// when done:
-q.value;
-
-
-
-управлять синтезатором который работает в pattern
-надо в шину направлять
-
-1. Создаем синт \pattMidi
-
-
-// 2. Создаем шину для управления (например, для частоты среза фильтра)
-~cutoffBus = Bus.control(s, 1);
-~cutoffBus.set(800); // начальное значение
-
-// 3. Создаем MIDIFunc для чтения CC-сообщений
-// Замените ccNum на номер вашей ручки/ползунка на MIDI-контроллере
-MIDIFunc.cc({ |val, num, chan, src|
-    // Масштабируем значение MIDI (0-127) в диапазон частоты фильтра (200 - 10000 Гц)
-    var freq = val.linexp(0, 127, 200, 10000);
-    ~cutoffBus.set(freq);
-}, ccNum: 1); // 1 — это обычно колесо модуляции (ModWheel)
-
-
-~pattern = Pbind(
-    \instrument, \pattMidi,
-    \dur, 0.25,
-    \degree, Pseq([0, 2, 4, 7, 4, 2], inf),
-    // Привязываем аргумент синтезатора к нашей MIDI-шине:
-    \fftCutoff, ~cutoffBus.asMap,
-    \amp, 0.15
-).play;
-
 
 =======================================================
            LFO
@@ -391,8 +536,6 @@ MIDIFunc.cc({ |val, num, chan, src|
 	sig = Limiter.ar(in: sig, level: dbamp(-0.4));
 }.asSynthDef(fadeTime: 0.2, name: \self_trig__proto).add;
 )
-
-Resonz
 
 ~self_trig1 = Synth(\self_trig__proto);
 ~self_trig1.release(0.3);
@@ -603,6 +746,55 @@ Pdef(
 }.asSynthDef(fadeTime: 0.1, name: \fb_sin__proto).add;
 )
 
+/*
+// power_map
+opcode iter1, k, kk
+    kRes, kParam xin
+    kRes = 1 - kParam * pow:k(kRes, 2)
+    xout kRes
+endop
+
+opcode logistic, k, kk
+    kRes, kParam xin
+    kRes = kParam * kRes * (1 - kRes)
+    xout kRes
+endop
+
+opcode hennon, kk, kkkk
+    kX, kY, kFi, kDelta xin
+    kXNext = kY + 1 - kFi * kX * kX
+	kYNext = kDelta * kX
+    xout kXNext, kYNext
+endop
+
+opcode ikeda, kk, kkkk
+    kX, kY, kMu, kT xin
+    kXNext = 1 + kMu * (kX * cos(kT) - kY * sin(kT))
+    kYNext = kMu * (kX * sin(kT) + kY * cos(kT))
+    xout kXNext, kYNext
+endop
+
+opcode Lorenz, kkk, kkkkkkk
+    kx,ky,kz,kdt,ks,krwwww,kb xin
+
+    kdx = ks*(ky-kx)
+    kdy = kx*(krwwww-kz)-ky
+    kdz = kx*ky-kb*kz
+
+    kx += kdt*kdx
+    ky += kdt*kdy
+    kz += kdt*kdz
+
+    xout kx,ky,kz
+endop
+
+*/
+
+(
+var a = 1.4, b = 0.3, x0 = 0, x1 = 1, size = 64;
+plot(size.collect { var aux = 1 - (a * (x1 ** 2)) + (b * x0); x0 = x1; x1 = aux; aux });
+)
+
 
 (
 // as a frequency control
@@ -747,112 +939,6 @@ b = NetAddr.new(~remote_ip, ~remote_port);    // create the NetAddr
 b.sendMsg("/fader1", 0.5);
 b.free;
 
-
-
-===============================================
-
-семплы (sampling)
-
-===============================================
-
-(
-// Загружаем семпл в специальную область памяти - буфер (Buffer). Это одномерный массив чисел, индексы начинаются с 0/
-~buf1 = Buffer.read(s, "D:/audio/samples/04-mic2-231205_1439.wav"); // Путь к файлу надо заменить
-~buf1.numChannels; //показывает кол-во каналов
-
-~buf2_chnl1 = Buffer.readChannel(s, "D:/audio/music/chernenko/lyra8_230426_2.wav", channels: [0]);
-~buf2_chnl1.numChannels;
-
-~buf3_chnl1 = Buffer.readChannel(s, "D:/audio/samples/vocal/numbers.wav", channels: [0]);
-~buf3_chnl1.numChannels;
-
-
-~buf4_glitch_loops = Buffer.read(s, "C:/home/Admin/audio/44446__looplicator__glitch-loops-102025/830048__looplicator__128-bpm-industrial-glitch-loop-15441-wav.wav");
-~buf4_glitch_loops.numChannels;
-
-~buf5_rock_breakbeat = Buffer.read(s, "D:/audio/samples/570888__kaypira_fp__drum-loop-120bpm-rock-breakbeat.wav");
-
-)
-
-~buf5_rock_breakbeat.play;
-
-
-///////////////////////////////////////////
-//         Подготовка к работе
-///////////////////////////////////////////
-
-// Надо запустить код из lib/fx.scd
-// lib/sample.scd
-
-// Включаем финальную обработку
-(
-~master = Synth(\master_proto, [\in_bus, ~master_send]);
-)
-
-
-////////////////////////////////////
-// BufRd - свободное управление скоростью и направлением воспроизведения
-(
-SynthDef(\player_var_speed_proto, {
-	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0, begin = 0, end = 1;
-	var out;
-	out = BufRd.ar(
-		2,
-		buf,
-		LFNoise1.ar(100) * BufFrames.ir(buf)
-		// Варианты обхода буфера:
-		// SinOsc.ar(0.1, 0, 0.5, 0.5) * BufFrames.ir(buf) // последовательное изменение направления
-		/*
-		(1-LFSaw.ar(BufDur.ir(buf).reciprocal)).
-		    range(BufFrames.ir(buf) * begin, BufFrames.ir(buf) * end)
-		// Обратное воспроизведение части семпла
-		*/
-	);
-	Out.ar(
-		out_bus,
-		dbamp(master_send_lvl_db) * out
-	);
-}).add;
-)
-
-
-~player_var_speed = Synth(\player_var_speed_proto, [\buf, ~buf1, \out_bus, ~master_send]);
-~player_var_speed.free;
-// , \begin, 0.3, \end, 0.7
-
-
-////////////////////////////////////////////////
-
-
-// ~granulator1 = Synth(\granulator_rate_ctrl_rec_1fx_send__proto, [\buf, ~buf2_chnl1, \out_bus, ~master_send]);
-
-
-(
-{((LFNoise2.kr(1).range(0.1, 10))**(-1)).poll}.play;
-)
-
-(
-{((LFNoise2.kr(0.1).exprange(0.01, 50))**(-1)).poll}.play;
-)
-
-(
-{
-	arg buf = 1000;
-	var trig, rate;
-	rate = ((LFNoise2.kr(0.3).exprange(0.01, 50))**(-1));
-	trig = Impulse.kr(
-		rate
-	);
-	TGrains.ar(
-		numChannels: 2,
-		trigger: trig,
-		bufnum: buf,
-		centerPos: BufDur.kr(buf) * LFNoise2.kr(1).range(0.01, 0.99),
-		dur: BufDur.kr(buf) * 0.1,
-		amp: 1,
-	);
-}.play(args: [\buf, ~buf3_chnl1]);
-)
 
 //////////////////////////
 // fft

@@ -364,3 +364,114 @@ Pbindef(\data_stream).stop;
 Pbindef(\click_stream).stop;
 Pbindef(\sub_stream).stop;
 )
+
+
+{10 - 10.bilinrand}.dup(1000).histo.plot;
+
+[{20-(10.gauss(0.01))}.dup(1000).histo, {10.gauss(10)}.dup(1000).histo, ].plot;
+
+{sin(pi * rrand(0.0, 1.0) / 2) ** 2}.dup(1000).histo.plot;
+{sin(pi * rrand(0.0, 1.0) / 2)}.dup(1000).histo.plot;
+
+
+(
+// Настройки диапазона для примера
+~low = 10.0;
+~high = 50.0;
+)
+
+(
+// 1. Арксинус (Самый гладкий U-колокол)
+~invertedBellArcsine = { |low, high|
+    var u = 1.0.rand; // Равномерное [0, 1)
+    var standardArcsine = sin(pi * u / 2).squared;
+    low + ((high - low) * standardArcsine);
+};
+)
+
+(
+// 2. Двухмодальное Гауссово распределение (Склеенный колокол)
+// Используем встроенный метод .gauss(mean, dev)
+~bimodalGaussian = { |low, high, stdDev=0.15|
+    var scale = high - low;
+    var dev = scale * stdDev;
+    var result;
+
+    // Бросаем монетку (0 или 1), чтобы выбрать к какому краю прижаться
+    if(0.5.coin) {
+        result = gauss(low, dev);  // Левый пик
+    } {
+        result = gauss(high, dev); // Правый пик
+    };
+    result.clip(low, high); // Обрезаем хвосты по границам
+};
+)
+
+(
+// 3. U-квадратичное распределение (Парабола)
+~uQuadratic = { |low, high|
+    var u = 1.0.rand;
+    // .cbrt — кубический корень (выполняется корректно для отрицательных чисел)
+	var root = (((4 * u - 2).cbrt) * 0.39685) + 0.5;
+    low + ((high - low) * root);
+};
+)
+
+// Пример теста в консоли (Post Window):
+10.do { ~invertedBellArcsine.(~low, ~high).postln };
+
+
+~invertedBellArcsine_arr = {~invertedBellArcsine.(~low, ~high)}.dup(1000);
+~invertedBellArcsine_arr.histo.plot;
+~invertedBellArcsine_arr.minItem;
+~invertedBellArcsine_arr.maxItem;
+
+~uQuadratic_arr = {~uQuadratic.(~low, ~high)}.dup(1000);
+~uQuadratic_arr.histo.plot;
+~uQuadratic_arr.minItem;
+~uQuadratic_arr.maxItem;
+
+{~bimodalGaussian.(~low, ~high, stdDev: 0.009)}.dup(1000).histo.plot;
+
+{~uQuadratic.(~low, ~high)}.dup(1000).histo.plot;
+
+
+
+((-100..200) / 100).collect(_.scurve).plot
+
+(
+{
+    var sig = LFNoise2.kr(1).scurve; // Медленный шум, деформированный к краям
+    sig.poll(1, "distorted noise"); // Смотрите значения в Post Window
+    0.0; // Заглушка для запуска синта
+}.play;
+)
+
+
+(
+{
+	var x = LFNoise2.kr(0.7);           // -1..1
+    var p = 0.25;                       // меньше 1 = сильнее прижатие к краям
+    var y = x.sign * x.abs.pow(p);
+    y.poll(1, "warped");
+    0.0;
+}.play;
+)
+
+
+(
+{
+    var trig = TDuty.kr(Dwhite(0.01, 0.1, inf) *
+                        Select.kr(Dwhite(0, 1, inf) > 0.7, [1, 40]));
+    // 70% времени — быстрые гранулы (0.01-0.1 с),
+    // 30% — длинные паузы/одиночные гранулы (0.4-4 с)
+    trig.poll(0, "trig");
+    0.0;
+}.play;
+)
+
+
+
+
+
+
