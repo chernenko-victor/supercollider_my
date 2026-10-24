@@ -44,15 +44,50 @@
 
 
 ////////////////////////////////////
+(
+SynthDef(\player__proto, {
+	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0, rate = 1.0, loop = 0;
+	var out;
+	out = PlayBuf.ar(
+		2,
+		bufnum: buf,
+		rate: rate * BufRateScale.kr(buf),
+		/*
+		trigger: 1.0,
+		startPos: 0.0,
+		*/
+		loop: loop,
+		doneAction: 2
+	);
+	Out.ar(
+		out_bus,
+		dbamp(master_send_lvl_db) * out
+	);
+}).add;
+)
+
+
+~player1 = Synth(\player__proto, [\buf, ~buf1, \out_bus, ~master_send, \rate, 0.5]);
+~player1.set(\rate, -1);
+~player1.free;
+
+
+~player2 = Synth(\player__proto, [\buf, ~buf5_rock_breakbeat, \out_bus, ~master_send, \rate, -1, \loop, 1]);
+~player2.set(\rate, -0.3);
+~player2.free;
+
+
 // BufRd - свободное управление скоростью и направлением воспроизведения
 (
 SynthDef(\player_var_speed_proto, {
 	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0, begin = 0, end = 1;
-	var out;
+	var out, trig_rnd, len;
+	trig_rnd = Dust.kr(1);
+	len = TRand.kr(0.1, 1.0, trig_rnd).poll;
 	out = BufRd.ar(
 		2,
 		buf,
-		LFNoise1.ar(1) * BufFrames.ir(buf)
+		LFNoise1.ar(1) * BufFrames.ir(buf) * len
 		// Варианты обхода буфера:
 		// SinOsc.ar(0.1, 0, 0.5, 0.5) * BufFrames.ir(buf) // последовательное изменение направления
 /*
@@ -75,6 +110,8 @@ SynthDef(\player_var_speed_proto, {
 // , \begin, 0.3, \end, 0.7
 
 
+~player_var_speed2 = Synth(\player_var_speed_proto, [\buf, ~buf5_rock_breakbeat, \out_bus, ~master_send]);
+~player_var_speed2.free;
 ////////////////////////////////////////////////
 
 
@@ -106,6 +143,140 @@ SynthDef(\player_var_speed_proto, {
 	);
 }.play(args: [\buf, ~buf3_chnl1]);
 )
+
+-------------------------------------------------
+изменение звуковысоты без изменения скорости
+PitchShift.ar(sig, pitchRatio: stretchFactor)
+
+
+-------------------------------------------------
+изменение скорости без изменения звуковысоты (time stretch)
+
+(
+SynthDef(\warp__proto, {
+	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0, pointerSpeed = 0.5;
+	var out;
+    var pointer = LFSaw.ar(pointerSpeed / BufDur.ir(~buf1)).range(0, 1);
+    out = Warp1.ar(1, ~buf1, pointer, freqScale: 1, windowSize: 0.1, overlaps: 8);
+	Out.ar(
+		out_bus,
+		dbamp(master_send_lvl_db) * out
+	);
+}).add;
+)
+
+~warp1 = Synth(\warp__proto, args: [\buf, ~buf1, \out_bus, ~master_send, \pointerSpeed, 2]);
+~warp1.free;
+
+
+//////
+Другой вариант
+(
+SynthDef(\time_stretch__proto, {
+	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0, pointerSpeed = 0.5;
+	var out;
+	var stretchFactor = 1/pointerSpeed; // 2 = медленнее в 2 раза
+    var sig = PlayBuf.ar(1, buf, BufRateScale.kr(buf) / stretchFactor, loop: 1);
+    out = PitchShift.ar(sig, pitchRatio: stretchFactor); // Возвращаем высоту
+	Out.ar(
+		out_bus,
+		dbamp(master_send_lvl_db) * out
+	);
+}).add;
+)
+
+~time_stretch1 = Synth(\time_stretch__proto, args: [\buf, ~buf1, \out_bus, ~master_send, \pointerSpeed, 0.5]);
+~time_stretch1.free;
+
+
+//////
+// WarpOverlap (из sc3-plugins, библиотека JoshUGens)
+// дополнительно запись во временный буфер
+(
+// stretch = 30 означает очень сильное замедление
+SynthDef(\warpstretch__proto, {
+	arg buf = 0, out_bus = 0, master_send_lvl_db = 0.0, pointerSpeed = 0.5, buf4rec = 1000, buf4rec_lvl_db = 0.0;
+	var out;
+	var stretchFactor = 1/pointerSpeed; // 2 = медленнее в 2 раза
+    out = WarpOverlap.ar(1, buf, overlaps: 8, stretch: stretchFactor, windowsize: 6) * 0.3;
+	Out.ar(
+		out_bus,
+		dbamp(master_send_lvl_db) * out
+	);
+	RecordBuf.ar(out, buf4rec, loop: 1, doneAction: 0);
+}).add;
+)
+
+~warpstretch1 = Synth(\warpstretch__proto, args: [\buf, ~buf1, \out_bus, ~master_send, \pointerSpeed, 0.25]);
+~warpstretch1.free;
+
+~warpstretch2 = Synth(\warpstretch__proto, args: [\buf, ~buf5_rock_breakbeat, \out_bus, ~master_send, \pointerSpeed, 2]);
+~warpstretch2.free;
+
+
+//////
+// пишем параллельно в буфер и потом из него играем с помощью \player_var_speed_proto
+~rec_buf1 = Buffer.alloc(s, s.sampleRate * 4, 1);
+
+(
+~warpstretch_rec2 = Synth(\warpstretch__proto, args: [
+	\buf, ~buf5_rock_breakbeat,
+	\out_bus, ~master_send,
+	\pointerSpeed, 2,
+	\master_send_lvl_db, -12,
+	\buf4rec, ~rec_buf1
+]);
+)
+~warpstretch_rec2.free;
+
+(
+~warpstretch_rec1 = Synth(\warpstretch__proto, args: [
+	\buf, ~buf1,
+	\out_bus, ~master_send,
+	\pointerSpeed, 0.25,
+	\master_send_lvl_db, -12,
+	\buf4rec, ~rec_buf1
+]);
+)
+~warpstretch_rec1.free;
+
+
+(
+~warpstretch_rec3 = Synth(\warpstretch__proto, args: [
+	\buf, ~buf2_chnl1,
+	\out_bus, ~master_send,
+	\pointerSpeed, 0.25,
+	\master_send_lvl_db, -3,
+	\buf4rec, ~rec_buf1
+]);
+)
+~warpstretch_rec3.free;
+
+
+~player_var_speed_recorder = Synth(\player_var_speed_proto, [\buf, ~rec_buf1, \out_bus, ~master_send]);
+~player_var_speed_recorder.free;
+
+
+
+/*
+Спектральный подход: фазовый вокодер (PV_RecordBuf / PV_PlayBuf)
+Это метод из мира анализа-синтеза. Он даёт более «гладкий», но иногда «металлический» или «размытый» звук, особенно на резких транзиентах. Идея в том, чтобы записать спектральные кадры звука в буфер, а затем проигрывать их с другой скоростью.
+
+PV_RecordBuf: записывает FFT-цепочку в большой буфер в виде последовательности спектральных кадров.
+
+PV_PlayBuf: проигрывает эти записанные кадры с произвольной скоростью, независимо от высоты тона.
+
+Этот подход требует, чтобы весь звук был предварительно проанализирован и записан в буфер, поэтому он не подходит для реального времени «на лету» с живым входом (без дополнительной задержки).
+*/
+
+/*
+Сторонние плагины: RubberBand и другие
+Для максимального качества и гибкости стоит обратить внимание на плагины, использующие специализированные алгоритмы.
+
+RubberBandStretcher / RubberBandPS (из библиотеки flexplugins): это обёртки над известной библиотекой RubberBand, которые обеспечивают очень качественный тайм-стретчинг и питч-шифтинг с сохранением формант.
+
+PV_PlayBufStretch: ещё один плагин для фазового вокодера, специально заточенный под тайм-стретчинг с опциональными алгоритмами фазовой блокировки для лучшего качества.
+*/
 
 
 // ==========================================
