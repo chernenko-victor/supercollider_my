@@ -11,7 +11,10 @@ MIDIIn.connectAll;
 notes = Array.newClear(128);    // array has one slot per possible MIDI note
 
 on = MIDIFunc.noteOn({ |veloc, num, chan, src|
-    notes[num] = Synth(\default, [\freq, num.midicps,
+	// num.postln;
+    /*notes[num] = Synth(\default, [\freq, num.midicps,
+        \amp, veloc * 0.00315]);*/
+	notes[num] = Synth(\fb_sin_adsr__proto, [\freq, num.midicps,
         \amp, veloc * 0.00315]);
 });
 
@@ -26,7 +29,7 @@ q = { on.free; off.free; };
 ~cc1 = MIDIFunc.cc({|val, ccNum, chan, src|
     val.postln; //this totally works!
     // ~synth.set(\cc1, val / 127);
-}, ccNum:1);
+}, ccNum:2);
 )
 
 // when done:
@@ -44,30 +47,97 @@ q.value;
 ~cutoffBus = Bus.control(s, 1);
 ~cutoffBus.set(800); // начальное значение
 
+
+можно напрямую использовать в синтезаторе
+
+(
+SynthDef(\moogSynth, {
+    arg outBus = 0, cutoffBus, freq = 110, amp = 0.3, gate = 1;
+    var sig, cutoffEnv, env;
+
+	env = Env.adsr(
+		attackTime: 0.1,
+		releaseTime: 0.1,
+		curve: 3.0
+	).kr(doneAction: 2, gate: gate);
+
+    // Читаем значение из управляющей шины
+    // Если шина пустая, по умолчанию применится 0, поэтому можно добавить базовое значение (например, + 400)
+    cutoffEnv = In.kr(cutoffBus, 1);
+
+    // Пример простого пилообразного звука с фильтром
+    sig = Saw.ar(freq);
+
+    // Используем значение из шины для управления частотой среза
+    // Ограничиваем диапазон от 20 до 20000 Гц для безопасности
+    sig = LPF.ar(sig, cutoffEnv.clip(20, 20000));
+
+	Out.ar(outBus, [sig * amp * env, sig * amp * env]);
+}).add;
+)
+
+// 4. Запускаем синтезатор и передаем ему нашу шину
+~mySynth = Synth(\moogSynth, [\cutoffBus, ~cutoffBus, \freq, 80]);
+
+// 5. Теперь меняйте значение в шине — звук будет меняться!
+~cutoffBus.set(200);  // Глухой звук
+~cutoffBus.set(2000); // Яркий звук
+
+// 6. Сюда же можно запустить автоматический LFO, который будет крутить срез за вас:
+~lfo = { SinOsc.kr(0.5).exprange(200, 4000) }.play(outbus: ~cutoffBus);
+
+~mySynth.release();
+~lfo.free;
+
+============================================
+
+
+(
 // 3. Создаем MIDIFunc для чтения CC-сообщений
 // Замените ccNum на номер вашей ручки/ползунка на MIDI-контроллере
-MIDIFunc.cc({ |val, num, chan, src|
+~cutoffBusMidi = MIDIFunc.cc({ |val, num, chan, src|
     // Масштабируем значение MIDI (0-127) в диапазон частоты фильтра (200 - 10000 Гц)
     var freq = val.linexp(0, 127, 200, 10000);
+	freq.postln;
     ~cutoffBus.set(freq);
-}, ccNum: 1); // 1 — это обычно колесо модуляции (ModWheel)
+}, ccNum: 0); // 1 — это обычно колесо модуляции (ModWheel)
+)
+
+Включим синт
+~mySynth = Synth(\moogSynth, [\cutoffBus, ~cutoffBus, \freq, 80]);
+
+Крутим миди ручку
+
+Выключаем синт
+~mySynth.free;
 
 
+Запустим в паттерне
+
+(
 ~pattern = Pbind(
-    \instrument, \pattMidi,
-    \dur, 0.25,
+    \instrument, \moogSynth,
+    \dur, 1,
     \degree, Pseq([0, 2, 4, 7, 4, 2], inf),
-    // Привязываем аргумент синтезатора к нашей MIDI-шине:
-    \fftCutoff, ~cutoffBus.asMap,
-    \amp, 0.15
+	\cutoffBus, ~cutoffBus,
+    \amp, 0.3
 ).play;
+)
 
+~pattern.stop;
+
+s.plotTree;
+
+
+Можно привязать шину к входному параметру синта (а не читать внутри значение из шины)
+// Привязываем аргумент cutoff к нашей шине control bus
+~mySynth.set(\cutoff, ~cutoffBus.asMap);
 
 ===============================================
-audio bus
+                    audio bus
 ===============================================
 
-
+Выполним код из lib/fx.csd
 // Включаем финальную обработку
 (
 ~master = Synth(\master_proto, [\in_bus, ~master_send]);

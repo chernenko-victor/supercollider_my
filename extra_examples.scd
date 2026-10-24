@@ -458,20 +458,52 @@ Pbindef(\sub_stream).stop;
 }.play;
 )
 
+(
+{LFNoise2.kr(5).clip2(1).lincurve(-1, 1, -1, 1, -8).poll}.play;
+)
+
 
 (
 {
-    var trig = TDuty.kr(Dwhite(0.01, 0.1, inf) *
-                        Select.kr(Dwhite(0, 1, inf) > 0.7, [1, 40]));
-    // 70% времени — быстрые гранулы (0.01-0.1 с),
-    // 30% — длинные паузы/одиночные гранулы (0.4-4 с)
-    trig.poll(0, "trig");
-    0.0;
+    var w = LFNoise2.kr(5).clip2(1).lincurve(-1, 1, -1, 1, -8);
+    var dur = Select.kr(w > 0, [
+        w.lincurve(-1, 0, 0.01, 0.1, -8),   // отрицательные: [0.01, 0.1]
+        w.lincurve(0, 1, 3, 4, -8)          // положительные: [3, 4]
+    ]);
+    dur.poll(0.1, "dur");
+    Impulse.ar(1 / dur) * 0.1;
 }.play;
 )
 
 
+(
+{
+    var raw = LFNoise2.kr(5).clip2(1);
+    var dur = Select.kr(raw > 0, [
+        raw.lincurve(-1, 0, 0.01, 0.1, -8),   // отрицательные
+        raw.lincurve(0, 1, 3, 4, -8)          // положительные
+    ]);
+    dur.poll(0.1, "dur");
+    Impulse.ar(1 / dur) * 0.1;
+}.play;
+)
 
 
+(
+var low = 0, high = 0, total = 0;
+{
+    var w = LFNoise2.kr(50).clip2(1).lincurve(-1, 1, -1, 1, -8);
+    var isHigh = w > 0;
+    SendReply.kr(Impulse.kr(100), '/sample', [isHigh]);
+    Silent.ar;
+}.play;
 
-
+OSCFunc({ |msg|
+    if (msg[3] > 0.5) { high = high + 1 } { low = low + 1 };
+    total = total + 1;
+    if (total % 500 == 0) {
+        ("low: " ++ (low/total).round(0.01) ++
+         "  high: " ++ (high/total).round(0.01)).postln;
+    };
+}, '/sample');
+)
