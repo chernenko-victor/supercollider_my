@@ -223,7 +223,7 @@ SynthDef(\warpstretch__proto, {
 	\buf, ~buf5_rock_breakbeat,
 	\out_bus, ~master_send,
 	\pointerSpeed, 2,
-	\master_send_lvl_db, -12,
+	\master_send_lvl_db, -96,
 	\buf4rec, ~rec_buf1
 ]);
 )
@@ -234,7 +234,7 @@ SynthDef(\warpstretch__proto, {
 	\buf, ~buf1,
 	\out_bus, ~master_send,
 	\pointerSpeed, 0.25,
-	\master_send_lvl_db, -12,
+	\master_send_lvl_db, -96,
 	\buf4rec, ~rec_buf1
 ]);
 )
@@ -252,10 +252,19 @@ SynthDef(\warpstretch__proto, {
 )
 ~warpstretch_rec3.free;
 
+(
+~warpstretch_rec4 = Synth(\warpstretch__proto, args: [
+	\buf, ~buf4_glitch_loops,
+	\out_bus, ~master_send,
+	\pointerSpeed, 0.25,
+	\master_send_lvl_db, -96,
+	\buf4rec, ~rec_buf1
+]);
+)
+~warpstretch_rec4.free;
 
 ~player_var_speed_recorder = Synth(\player_var_speed_proto, [\buf, ~rec_buf1, \out_bus, ~master_send]);
 ~player_var_speed_recorder.free;
-
 
 
 /*
