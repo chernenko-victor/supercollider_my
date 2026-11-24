@@ -28,9 +28,10 @@ Pbind().play;
 // управление частотой и ритмом
 (
 Pbind(
-	\freq, 880,
+	\freq, 440,
 	\dur, 1.5,
-	\amp, 0.1
+	\amp, 0.1,
+	\instrument, \cheapPiano1
 ).play;
 )
 
@@ -41,6 +42,38 @@ Pbind(
 	\amp, 0.5,
 ).play;
 )
+
+
+(
+Pbindef(
+	\gjfkdjfhgd8688686,
+	\dur, Pseq([1, 0.25, 1, Rest(1)], inf),
+	\amp, 0.1,
+	\freq, Pseq([220, 440, 880] * 2, inf),
+	\instrument, \cheapPiano1,
+).play;
+)
+
+(
+Pbindef(
+	\gjfkdjfhgd,
+	\freq, Pseq([220, 440, 880], inf),
+	\dur, Pseq([0.25, 0.25, 1, Rest(0.25)], inf),
+	\amp, 0.1,
+	\instrument, \cheapPiano1,
+).play;
+)
+
+Pbindef(\gjfkdjfhgd).stop;
+
+(
+Pbindef(
+	\gjfkdjfhgd8688686,
+	\freq, Pseq([220, 440, 880] * 2, inf),
+)
+)
+
+Pbindef(\gjfkdjfhgd8688686).stop;
 
 (
 ~part2 = Pbind(
@@ -135,10 +168,10 @@ Pbind(
 // запустите код
 
 (
-Pdef(
+Pbindef(
 	\seq1
 	Pbind(
-		\freq, 220,=
+		\freq, 220,
 	)
 ).play(argClock: ~cklk1, quant: 4);
 )
@@ -152,12 +185,17 @@ Pdef(
 
 
 
+
 /////////////////////////////////////////
 //
 //       Массивы
 //
 
 ~midi_pitch1_arr = [60, 61, 63, 65, 68];
+
+~midi_pitch2_arr = [60, 61, 63, 65, 68];
+
+~midi_pitch1_arr[]
 
 ~midi_pitch1_arr.postln; // выводит значение переменной в консоль
 ~midi_pitch1_arr[1].postln; // значение 2го элемента массива

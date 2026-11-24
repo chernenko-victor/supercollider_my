@@ -263,6 +263,8 @@ Pbindef(\data_stream, \dur, Pwrand([0.125, 0.25, Rest(0.125)], [0.5, 0.4, 0.1], 
 
 Pbindef(\data_stream, \dur, Pseq([Pn(0.5, 8), Pn(0.25, 8), Pn(0.125, 16)], inf));
 
+Pbindef(\data_stream, \dur, Pbjorklund2(5, 16, inf) / 4);
+
 
 Pbindef(\sub_stream, \dur, Pseq([Pn(0.5, 8), Pn(0.25, 8), Pn(0.125, 16)], inf));
 
@@ -276,13 +278,41 @@ Pbindef(\sub_stream, \dur, Pbjorklund2(3, 8, inf) / 4);
 
 Pbindef(\data_stream, \freq, Pseq([4000, 6000, 8000], inf));
 
-Pbindef(\data_stream, \freq, Pwalk([(12..1), (9..-3)] * 1000, stepPattern: Pser([1, 2], inf), directionPattern: 1));
-
+(
+Pbindef(
+	\data_stream,
+	\freq, Pwalk([(12..1), (9..-3)] * 1000, stepPattern: Pser([1, 2], inf), directionPattern: 1),
+	\amp, Pwhite(0.03, 0.07, inf),
+);
+)
 
 (
-Pbindef(\data_stream,
-	\freq, Pwalk([(12..1), (9..-3)] * 1000, stepPattern: Pser([1, 2], inf), directionPattern: 1)) * Pwalk((2..13), stepPattern: Pser([1, 2], inf), directionPattern: 1);
+Pbindef(
+	\data_stream,
+	\freq, Pwalk([(12..1), (9..-3)] * 1000, stepPattern: Pser([1, 2], inf), directionPattern: 1),
+	\amp, Pwhite(0.03, 0.07, inf),
+)
+* Pwalk((2..13), stepPattern: Pser([1, 2], inf), directionPattern: 1);
+)
 
+(
+Pbindef(
+	\data_stream,
+	\freq, Pwalk([(12..1), (9..-3)] * 1000, stepPattern: Pser([1, 2], inf), directionPattern: 1),
+	\amp, Pwhite(0.03, 0.07, inf),
+)
+* Prand([Pn(0.7, 16), Pn(0.5, 23), Pn(0.32, 16), Pn(0.01, 7)], inf)
+// * Pwalk((2..13), stepPattern: Pser([1, 2], inf), directionPattern: 1);
+)
+
+(
+Pbindef(
+	\data_stream,
+	\freq, Pwalk([(5..12), (9..-7)] * 500, stepPattern: Pser([1, 2, 4, -1, -2, -4], inf), directionPattern: 1),
+	\amp, Pwhite(0.03, 0.07, inf),
+)
+* Prand([Pn(0.7, 16), Pn(0.5, 23), Pn(0.32, 16), Pn(0.01, 7)], inf)
+* Pwalk((2..13), stepPattern: Pser([1, 2], inf), directionPattern: 1);
 )
 
 
@@ -417,6 +447,18 @@ Pbindef(\sub_stream).stop;
 };
 )
 
+(
+// 3.2 U-квадратичное распределение (Парабола) + управляемая середина
+~uQuadraticMiddleCtrl = {
+	arg low = 0.0, high = 1.0, middle_depth = 0;
+    var u = 1.0.rand, middle = 1.0.rand * middle_depth;
+    // .cbrt — кубический корень (выполняется корректно для отрицательных чисел)
+	var root = (((4 * u - 2).cbrt) * 0.39685) + 0.5;
+	root = root + middle;
+    low + ((high - low) * root);
+};
+)
+
 // Пример теста в консоли (Post Window):
 10.do { ~invertedBellArcsine.(~low, ~high).postln };
 
@@ -430,6 +472,41 @@ Pbindef(\sub_stream).stop;
 ~uQuadratic_arr.histo.plot;
 ~uQuadratic_arr.minItem;
 ~uQuadratic_arr.maxItem;
+
+
+~uQuadraticMiddleCtrl_arr = {~uQuadraticMiddleCtrl.(~low, ~high)}.dup(1000);
+~uQuadraticMiddleCtrl_arr.histo.plot("uQuadraticMiddleCtrl middle_depth = 0");
+~uQuadraticMiddleCtrl_arr.minItem;
+~uQuadraticMiddleCtrl_arr.maxItem;
+
+
+~uQuadraticMiddleCtrl_some_uniform_arr = {~uQuadraticMiddleCtrl.(~low, ~high, 0.3)}.dup(1000);
+~uQuadraticMiddleCtrl_some_uniform_arr.histo.plot("uQuadraticMiddleCtrl middle_depth = 0.3");
+~uQuadraticMiddleCtrl_some_uniform_arr.minItem;
+~uQuadraticMiddleCtrl_some_uniform_arr.maxItem;
+
+(
+Pbindef(\test_quadr_rnd).clear;
+Pbindef(
+	\test_quadr_rnd,
+	\midinote, Pfunc({
+		~uQuadraticMiddleCtrl.(48, 72, 0.1).floor
+	}),
+	\dur, Pfunc({
+		(~uQuadraticMiddleCtrl.(1, 1000).floor) / 100
+	}).trace,
+).play;
+)
+
+Pbindef(\test_quadr_rnd).stop;
+
+
+~uQuadraticMiddleCtrl_some_uniform_arr = {~uQuadraticMiddleCtrl.(1, 1000).floor / 100}.dup(1000);
+~uQuadraticMiddleCtrl_some_uniform_arr.histo.plot("uQuadraticMiddleCtrl middle_depth = 0.3");
+~uQuadraticMiddleCtrl_some_uniform_arr.minItem;
+~uQuadraticMiddleCtrl_some_uniform_arr.maxItem;
+
+
 
 {~bimodalGaussian.(~low, ~high, stdDev: 0.009)}.dup(1000).histo.plot;
 
