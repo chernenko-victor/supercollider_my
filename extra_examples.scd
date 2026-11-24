@@ -395,7 +395,12 @@ Pbindef(\click_stream).stop;
 Pbindef(\sub_stream).stop;
 )
 
+=============================== ===============
+как сделать большой конраст в значениях
+на краях диапазона часто, а в центре редко
+=============================== ===============
 
+не подходит
 {10 - 10.bilinrand}.dup(1000).histo.plot;
 
 [{20-(10.gauss(0.01))}.dup(1000).histo, {10.gauss(10)}.dup(1000).histo, ].plot;
@@ -404,6 +409,7 @@ Pbindef(\sub_stream).stop;
 {sin(pi * rrand(0.0, 1.0) / 2)}.dup(1000).histo.plot;
 
 
+так лучше
 (
 // Настройки диапазона для примера
 ~low = 10.0;
@@ -485,6 +491,31 @@ Pbindef(\sub_stream).stop;
 ~uQuadraticMiddleCtrl_some_uniform_arr.minItem;
 ~uQuadraticMiddleCtrl_some_uniform_arr.maxItem;
 
+
+// просто собрал функцию где быстрых и медленных много, а середины мало
+(
+~three_regions = {
+	// var rand = [1,2,3].wchoose([8, 3, 20].normalizeSum);
+	var rand = [1,2,3].wchoose([10, 3, 8].normalizeSum);
+	case
+	{rand == 1} {(1..10).choose / 50}
+	{rand == 2} {(1..10).choose / 10}
+	{(2..7).choose * 1.5};
+};
+)
+
+~three_regions_arr = {~three_regions.()}.dup(1000);
+~three_regions_arr.histo.plot;
+
+
+// повторения
+a = Pseq([1, 2, 3], inf);
+b = StreamClutch(a, { 0.5.coin });
+12.do({ b.next.postln });
+
+// Pdup ?
+
+
 (
 Pbindef(\test_quadr_rnd).clear;
 Pbindef(
@@ -492,13 +523,96 @@ Pbindef(
 	\midinote, Pfunc({
 		~uQuadraticMiddleCtrl.(48, 72, 0.1).floor
 	}),
-	\dur, Pfunc({
-		(~uQuadraticMiddleCtrl.(1, 1000).floor) / 100
-	}).trace,
+	\dur, StreamClutch(
+		Pfunc({
+			// (~uQuadraticMiddleCtrl.(1, 1000).floor) / 100
+			// ((~uQuadraticMiddleCtrl.(1, 700).floor) / 100)**1.05
+			~three_regions.()
+		}),
+		{ 0.5.coin }
+	).trace,
+	//\legato, 0.5,
+	\legato, Pif(
+		Pkey(\dur) > 0.5,
+		Prand((1..12), inf) / 10,
+		Prand((8..20), inf) / 10,
+	),
 ).play;
 )
 
+
+(
+Pbindef(
+	\test_quadr_rnd,
+	\instrument, \default,
+).play;
+)
+
+(
+Pbindef(
+	\test_quadr_rnd,
+	\instrument, \ikeda_sine,
+).play;
+)
+
+
+(
+Pbindef(
+	\test_quadr_rnd,
+	\freq, Pseq([4000, 6000, 8000], inf));
+)
+
+(
+Pbindef(
+	\test_quadr_rnd,
+	\freq, Pwalk([(12..1), (9..-3)] * 1000, stepPattern: Pser([1, 2], inf), directionPattern: 1),
+	\amp, Pwhite(0.03, 0.07, inf),
+);
+)
+
+(
+Pbindef(
+	\test_quadr_rnd,
+	\freq, Pwalk([(12..1), (9..-3)] * 1000, stepPattern: Pser([1, 2], inf), directionPattern: 1),
+	\amp, Pwhite(0.03, 0.07, inf),
+)
+* Pwalk((2..13), stepPattern: Pser([1, 2], inf), directionPattern: 1);
+)
+
+(
+Pbindef(
+	\test_quadr_rnd,
+	\freq, Pwalk([(12..1), (9..-3)] * 1000, stepPattern: Pser([1, 2], inf), directionPattern: 1),
+	\amp, Pwhite(0.03, 0.07, inf),
+)
+* Prand([Pn(0.7, 16), Pn(0.5, 23), Pn(0.32, 16), Pn(0.01, 7)], inf)
+// * Pwalk((2..13), stepPattern: Pser([1, 2], inf), directionPattern: 1);
+)
+
+(
+Pbindef(
+	\test_quadr_rnd,
+	\freq, Pwalk([(5..12), (9..-7)] * 500, stepPattern: Pser([1, 2, 4, -1, -2, -4], inf), directionPattern: 1),
+	\amp, Pwhite(0.03, 0.07, inf),
+)
+* Prand([Pn(0.7, 16), Pn(0.5, 23), Pn(0.32, 16), Pn(0.01, 7)], inf)
+* Pwalk((2..13), stepPattern: Pser([1, 2], inf), directionPattern: 1);
+)
+
+
+(
+Pbindef(
+	\test_quadr_rnd,
+	\freq, nil,
+	\midinote, Pfunc({
+		~uQuadraticMiddleCtrl.(48, 72, 0.1).floor
+	}),
+).play;
+)
+
+
 Pbindef(\test_quadr_rnd).stop;
+
 
 
 ~uQuadraticMiddleCtrl_some_uniform_arr = {~uQuadraticMiddleCtrl.(1, 1000).floor / 100}.dup(1000);
@@ -513,6 +627,7 @@ Pbindef(\test_quadr_rnd).stop;
 {~uQuadratic.(~low, ~high)}.dup(1000).histo.plot;
 
 
+аналогично в синте
 
 ((-100..200) / 100).collect(_.scurve).plot
 
